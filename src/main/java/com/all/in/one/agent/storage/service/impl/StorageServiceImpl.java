@@ -1,22 +1,13 @@
 package com.all.in.one.agent.storage.service.impl;
 
-
+import com.all.in.one.agent.storage.config.StorageConfigProperties;
 import com.all.in.one.agent.storage.dto.FileListDTO;
-import com.all.in.one.agent.storage.dto.FileUploadDTO;
-import com.all.in.one.agent.storage.dto.StorageConfigDTO;
-import com.all.in.one.agent.storage.entity.StorageConfig;
-import com.all.in.one.agent.storage.entity.StorageFile;
-import com.all.in.one.agent.storage.mapper.StorageConfigMapper;
-import com.all.in.one.agent.storage.mapper.StorageFileMapper;
 import com.all.in.one.agent.storage.service.StorageService;
 import com.all.in.one.agent.storage.util.S3ClientUtil;
 import com.all.in.one.agent.storage.security.FileSecurityUtils;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -28,13 +19,8 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -42,222 +28,168 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class StorageServiceImpl extends ServiceImpl<StorageConfigMapper, StorageConfig> implements StorageService {
-    
-    private final StorageFileMapper storageFileMapper;
+public class StorageServiceImpl implements StorageService {
+
+    private final StorageConfigProperties configProperties;
     private final S3ClientUtil s3ClientUtil;
     private final FileSecurityUtils fileSecurityUtils;
 
-    public StorageServiceImpl(StorageFileMapper storageFileMapper, S3ClientUtil s3ClientUtil, FileSecurityUtils fileSecurityUtils) {
-        this.storageFileMapper = storageFileMapper;
+    public StorageServiceImpl(StorageConfigProperties configProperties, S3ClientUtil s3ClientUtil, FileSecurityUtils fileSecurityUtils) {
+        this.configProperties = configProperties;
         this.s3ClientUtil = s3ClientUtil;
         this.fileSecurityUtils = fileSecurityUtils;
     }
-    
+
     @Override
-    public StorageConfig saveConfig(StorageConfigDTO configDTO) {
-        StorageConfig config = new StorageConfig();
-        BeanUtils.copyProperties(configDTO, config);
-        
-        if (config.getId() == null) {
-            config.setCreateTime(LocalDateTime.now());
+    public Map<String, StorageConfigProperties.Backend> getAllBackends() {
+        return configProperties.getBackends();
+    }
+
+    @Override
+    public StorageConfigProperties.Backend getBackend(String backendName) {
+        StorageConfigProperties.Backend backend = configProperties.getBackends().get(backendName);
+        if (backend == null) {
+            throw new RuntimeException("存储后端不存在: " + backendName);
         }
-        config.setUpdateTime(LocalDateTime.now());
-        
-        saveOrUpdate(config);
-        return config;
+        if (!Boolean.TRUE.equals(backend.getEnabled())) {
+            throw new RuntimeException("存储后端未启用: " + backendName);
+        }
+        return backend;
     }
-    
+
     @Override
-    public List<StorageConfig> getConfigList() {
-        LambdaQueryWrapper<StorageConfig> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(StorageConfig::getCreateTime);
-        return list(wrapper);
+    public StorageConfigProperties.Backend getDefaultBackend() {
+        String defaultBackendName = configProperties.getDefaultBackend();
+        if (defaultBackendName == null || defaultBackendName.isEmpty()) {
+            throw new RuntimeException("未配置默认存储后端");
+        }
+        return getBackend(defaultBackendName);
     }
-    
+
     @Override
-    public StorageConfig getConfigById(Long id) {
-        return getById(id);
-    }
-    
-    @Override
-    public void deleteConfig(Long id) {
-        removeById(id);
-    }
-    
-    @Override
-    public boolean testConnection(StorageConfigDTO configDTO) {
+    public boolean testConnection(String backendName) {
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(configDTO);
+            StorageConfigProperties.Backend backend = getBackend(backendName);
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
             ListBucketsRequest request = ListBucketsRequest.builder().build();
             s3Client.listBuckets(request);
             return true;
         } catch (Exception e) {
-            log.error("测试存储连接失败", e);
+            log.error("测试存储连接失败 - backend: {}", backendName, e);
             return false;
         }
     }
-    
+
     @Override
-    public StorageFile uploadFile(MultipartFile file, FileUploadDTO uploadDTO) {
-        StorageConfig config = getConfigById(uploadDTO.getConfigId());
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
+    public Map<String, Object> uploadFile(MultipartFile file, String backendName, String bucketName, String objectKey) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
         // 文件安全检查
         if (!fileSecurityUtils.isFileSecure(file.getOriginalFilename(), file.getSize())) {
             throw new RuntimeException("文件类型不安全或文件过大");
         }
 
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            
-            String bucketName = uploadDTO.getBucketName() != null ? uploadDTO.getBucketName() : config.getDefaultBucket();
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
 
             // 安全清理文件名
             String originalFilename = fileSecurityUtils.sanitizeFilename(file.getOriginalFilename());
-            String objectKey = uploadDTO.getObjectKey() != null ? uploadDTO.getObjectKey() :
-                    generateObjectKey(originalFilename);
+            String actualObjectKey = objectKey != null ? objectKey : generateObjectKey(originalFilename);
 
             // 检查存储桶是否存在，如果不存在则创建
             try {
                 HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
-                        .bucket(bucketName)
+                        .bucket(actualBucketName)
                         .build();
                 s3Client.headBucket(headBucketRequest);
             } catch (NoSuchBucketException e) {
                 // 存储桶不存在，创建它
                 CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
-                        .bucket(bucketName)
+                        .bucket(actualBucketName)
                         .build();
                 s3Client.createBucket(createBucketRequest);
-                log.info("创建存储桶: {}", bucketName);
+                log.info("创建存储桶: {}", actualBucketName);
             }
-            
+
             // 上传文件到S3
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(objectKey)
+                    .bucket(actualBucketName)
+                    .key(actualObjectKey)
                     .contentType(file.getContentType())
                     .build();
-            
+
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(
                     file.getInputStream(), file.getSize()));
-            
-            // 保存文件记录
-            StorageFile storageFile = new StorageFile();
-            storageFile.setFileName(uploadDTO.getFileName() != null ? uploadDTO.getFileName() : file.getOriginalFilename());
-            storageFile.setFilePath(objectKey);
-            storageFile.setFileSize(file.getSize());
-            storageFile.setFileType(file.getContentType());
-            storageFile.setBucketName(bucketName);
-            storageFile.setObjectKey(objectKey);
-            storageFile.setConfigId(config.getId());
-            storageFile.setUploadTime(LocalDateTime.now());
-            storageFile.setDeleted(false);
-            
-            storageFileMapper.insert(storageFile);
-            return storageFile;
-            
+
+            // 返回文件信息
+            Map<String, Object> result = new HashMap<>();
+            result.put("backendName", backendName);
+            result.put("bucketName", actualBucketName);
+            result.put("objectKey", actualObjectKey);
+            result.put("fileName", file.getOriginalFilename());
+            result.put("fileSize", file.getSize());
+            result.put("contentType", file.getContentType());
+            result.put("uploadTime", System.currentTimeMillis());
+
+            return result;
+
         } catch (Exception e) {
-            log.error("文件上传失败", e);
+            log.error("文件上传失败 - backend: {}, bucket: {}", backendName, bucketName, e);
             throw new RuntimeException("文件上传失败: " + e.getMessage());
         }
     }
-    
-    @Override
-    public void downloadFile(Long fileId, HttpServletResponse response) {
-        StorageFile storageFile = getFileInfo(fileId);
-        if (storageFile == null) {
-            throw new RuntimeException("文件不存在");
-        }
-        
-        StorageConfig config = getConfigById(storageFile.getConfigId());
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
-        try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(storageFile.getBucketName())
-                    .key(storageFile.getObjectKey())
-                    .build();
-            
-            // 设置响应头
-            response.setContentType(storageFile.getFileType());
-            response.setHeader("Content-Disposition", "attachment; filename=" + 
-                    URLEncoder.encode(storageFile.getFileName(), StandardCharsets.UTF_8));
-            
-            // 复制文件流到响应
-            s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(response.getOutputStream()));
 
-            // 更新最后访问时间
-            storageFile.setLastAccessTime(LocalDateTime.now());
-            storageFileMapper.updateById(storageFile);
-            
-        } catch (Exception e) {
-            log.error("文件下载失败", e);
-            throw new RuntimeException("文件下载失败: " + e.getMessage());
-        }
-    }
-    
     @Override
-    public void downloadFileByKey(Long configId, String bucketName, String objectKey, HttpServletResponse response) {
-        StorageConfig config = getConfigById(configId);
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
+    public void downloadFile(String backendName, String bucketName, String objectKey, HttpServletResponse response) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
+
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(actualBucketName)
                     .key(objectKey)
                     .build();
-            
+
             // 从对象键中提取文件名
             String fileName = objectKey.substring(objectKey.lastIndexOf('/') + 1);
-            
+
             // 设置响应头
             response.setContentType("application/octet-stream");
-            response.setHeader("Content-Disposition", "attachment; filename=" + 
+            response.setHeader("Content-Disposition", "attachment; filename=" +
                     URLEncoder.encode(fileName, StandardCharsets.UTF_8));
-            
+
             // 复制文件流到响应
             s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(response.getOutputStream()));
 
         } catch (Exception e) {
-            log.error("文件下载失败", e);
+            log.error("文件下载失败 - backend: {}, bucket: {}, key: {}", backendName, bucketName, objectKey, e);
             throw new RuntimeException("文件下载失败: " + e.getMessage());
         }
     }
-    
+
     @Override
     public Map<String, Object> listFiles(FileListDTO listDTO) {
         if (listDTO == null) {
             throw new RuntimeException("请求参数不能为空");
         }
-        
-        if (listDTO.getConfigId() == null) {
-            throw new RuntimeException("存储配置ID不能为空");
+
+        if (listDTO.getBackendName() == null || listDTO.getBackendName().isEmpty()) {
+            throw new RuntimeException("存储后端名称不能为空");
         }
-        
-        StorageConfig config = getConfigById(listDTO.getConfigId());
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
+
+        StorageConfigProperties.Backend backend = getBackend(listDTO.getBackendName());
+
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            String bucketName = listDTO.getBucketName() != null ? listDTO.getBucketName() : config.getDefaultBucket();
-            
-            log.debug("开始获取文件列表 - bucket: {}, prefix: {}, delimiter: {}", 
-                    bucketName, listDTO.getPrefix(), listDTO.getDelimiter());
-            
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+            String bucketName = listDTO.getBucketName() != null ? listDTO.getBucketName() : backend.getDefaultBucket();
+
+            log.debug("开始获取文件列表 - backend: {}, bucket: {}, prefix: {}, delimiter: {}",
+                    listDTO.getBackendName(), bucketName, listDTO.getPrefix(), listDTO.getDelimiter());
+
             var requestBuilder = ListObjectsV2Request.builder()
                     .bucket(bucketName)
                     .maxKeys(listDTO.getPageSize() != null ? listDTO.getPageSize() : listDTO.getMaxKeys());
@@ -266,27 +198,27 @@ public class StorageServiceImpl extends ServiceImpl<StorageConfigMapper, Storage
                 requestBuilder = requestBuilder.prefix(listDTO.getPrefix());
                 log.debug("设置前缀: {}", listDTO.getPrefix());
             }
-            
+
             if (listDTO.getDelimiter() != null && !listDTO.getDelimiter().isEmpty()) {
                 requestBuilder = requestBuilder.delimiter(listDTO.getDelimiter());
                 log.debug("设置分隔符: {}", listDTO.getDelimiter());
             }
-            
+
             if (listDTO.getContinuationToken() != null && !listDTO.getContinuationToken().isEmpty()) {
                 requestBuilder = requestBuilder.continuationToken(listDTO.getContinuationToken());
                 log.debug("设置继续标记: {}", listDTO.getContinuationToken());
             }
-            
+
             ListObjectsV2Request request = requestBuilder.build();
             log.debug("S3请求参数: {}", request);
-            
+
             ListObjectsV2Response response = s3Client.listObjectsV2(request);
-            
-            log.debug("S3响应 - 文件数量: {}, 文件夹数量: {}, 是否截断: {}", 
-                    response.contents().size(), 
+
+            log.debug("S3响应 - 文件数量: {}, 文件夹数量: {}, 是否截断: {}",
+                    response.contents().size(),
                     response.commonPrefixes() != null ? response.commonPrefixes().size() : 0,
                     response.isTruncated());
-            
+
             Map<String, Object> result = new HashMap<>();
 
             // 1. 提取所有一级文件夹和当前目录下的文件
@@ -412,123 +344,48 @@ public class StorageServiceImpl extends ServiceImpl<StorageConfigMapper, Storage
             result.put("files", pageFiles);
             result.put("pagination", pagination);
             return result;
-            
+
         } catch (Exception e) {
-            log.error("获取文件列表失败 - configId: {}, bucketName: {}, prefix: {}", 
-                    listDTO.getConfigId(), listDTO.getBucketName(), listDTO.getPrefix(), e);
+            log.error("获取文件列表失败 - backend: {}, bucketName: {}, prefix: {}",
+                    listDTO.getBackendName(), listDTO.getBucketName(), listDTO.getPrefix(), e);
             throw new RuntimeException("获取文件列表失败: " + e.getMessage());
         }
     }
-    
+
     @Override
-    public void deleteFile(Long fileId) {
-        StorageFile storageFile = getFileInfo(fileId);
-        if (storageFile == null) {
-            throw new RuntimeException("文件不存在");
-        }
-        
-        StorageConfig config = getConfigById(storageFile.getConfigId());
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
+    public void deleteFile(String backendName, String bucketName, String objectKey) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
+
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(storageFile.getBucketName())
-                    .key(storageFile.getObjectKey())
-                    .build();
-            
-            s3Client.deleteObject(deleteObjectRequest);
-            
-            // 标记文件��删除状态
-            storageFile.setDeleted(true);
-            storageFileMapper.updateById(storageFile);
-            
-        } catch (Exception e) {
-            log.error("文件删除失败", e);
-            throw new RuntimeException("文件删除失败: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public void deleteFileByKey(Long configId, String bucketName, String objectKey) {
-        StorageConfig config = getConfigById(configId);
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
-        try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            
-            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(actualBucketName)
                     .key(objectKey)
                     .build();
-            
+
             s3Client.deleteObject(deleteObjectRequest);
-            
+
         } catch (Exception e) {
-            log.error("文件删除失败", e);
+            log.error("文件删除失败 - backend: {}, bucket: {}, key: {}", backendName, bucketName, objectKey, e);
             throw new RuntimeException("文件删除失败: " + e.getMessage());
         }
     }
-    
-    @Override
-    public StorageFile getFileInfo(Long fileId) {
-        return storageFileMapper.selectById(fileId);
-    }
-    
-    @Override
-    public String getPreviewUrl(Long fileId) {
-        StorageFile storageFile = getFileInfo(fileId);
-        if (storageFile == null) {
-            throw new RuntimeException("文件不存在");
-        }
-        
-        StorageConfig config = getConfigById(storageFile.getConfigId());
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
-        try {
-            // 使用S3Presigner生成预签名URL
-            S3Presigner presigner = s3ClientUtil.createS3Presigner(config);
 
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(storageFile.getBucketName())
-                    .key(storageFile.getObjectKey())
-                    .build();
-            
-            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(java.time.Duration.ofHours(1))
-                    .getObjectRequest(getObjectRequest)
-                    .build();
-
-            return presigner.presignGetObject(presignRequest).url().toString();
-
-        } catch (Exception e) {
-            log.error("获取预览URL失败", e);
-            throw new RuntimeException("��取预览URL失败: " + e.getMessage());
-        }
-    }
-    
     @Override
-    public void previewByKey(Long configId, String bucketName, String objectKey, HttpServletResponse response) {
-        StorageConfig config = getConfigById(configId);
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
+    public void previewFile(String backendName, String bucketName, String objectKey, HttpServletResponse response) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
 
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
 
             // 获取内容类型
             String contentType = "application/octet-stream";
             try {
                 HeadObjectRequest headReq = HeadObjectRequest.builder()
-                        .bucket(bucketName)
+                        .bucket(actualBucketName)
                         .key(objectKey)
                         .build();
                 HeadObjectResponse headResp = s3Client.headObject(headReq);
@@ -546,75 +403,128 @@ public class StorageServiceImpl extends ServiceImpl<StorageConfigMapper, Storage
                     URLEncoder.encode(fileName, StandardCharsets.UTF_8));
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(actualBucketName)
                     .key(objectKey)
                     .build();
 
             s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(response.getOutputStream()));
         } catch (Exception e) {
-            log.error("文件预览失败", e);
+            log.error("文件预览失败 - backend: {}, bucket: {}, key: {}", backendName, bucketName, objectKey, e);
             throw new RuntimeException("文件预览失败: " + e.getMessage());
         }
     }
 
     @Override
-    public void createFolder(Long configId, String bucketName, String folderPath) {
-        StorageConfig config = getConfigById(configId);
-        if (config == null) {
-            throw new RuntimeException("存储配置不存在");
-        }
-        
+    public String getPresignedUrl(String backendName, String bucketName, String objectKey, int expirationSeconds) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
-            String actualBucketName = bucketName != null ? bucketName : config.getDefaultBucket();
-            
+            S3Presigner presigner = s3ClientUtil.createS3Presigner(backend);
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(actualBucketName)
+                    .key(objectKey)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofSeconds(expirationSeconds))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            return presigner.presignGetObject(presignRequest).url().toString();
+
+        } catch (Exception e) {
+            log.error("获取预签名URL失败 - backend: {}, bucket: {}, key: {}", backendName, bucketName, objectKey, e);
+            throw new RuntimeException("获取预签名URL失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void createFolder(String backendName, String bucketName, String folderPath) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
+        try {
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
+
             // 确保文件夹路径以/结尾
             if (!folderPath.endsWith("/")) {
                 folderPath += "/";
             }
-            
+
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(actualBucketName)
                     .key(folderPath)
                     .build();
-            
+
             s3Client.putObject(putObjectRequest, RequestBody.empty());
-            
+
         } catch (Exception e) {
-            log.error("创建文件夹失败", e);
+            log.error("创建文件夹失败 - backend: {}, bucket: {}, folderPath: {}", backendName, bucketName, folderPath, e);
             throw new RuntimeException("创建文件夹失败: " + e.getMessage());
         }
     }
-    
+
     @Override
-    public List<String> listBuckets(Long configId) {
-        StorageConfig config = getConfigById(configId);
-        if (config == null) {
-            throw new RuntimeException("存���配置不存在");
-        }
-        
+    public List<String> listBuckets(String backendName) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
         try {
-            S3Client s3Client = s3ClientUtil.createS3Client(config);
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
             ListBucketsRequest request = ListBucketsRequest.builder().build();
             ListBucketsResponse response = s3Client.listBuckets(request);
-            
+
             return response.buckets().stream()
                     .map(Bucket::name)
                     .collect(Collectors.toList());
-            
+
         } catch (Exception e) {
-            log.error("获取存储桶列表失败", e);
+            log.error("获取存储桶列表失败 - backend: {}", backendName, e);
             throw new RuntimeException("获取存储桶列表失败: " + e.getMessage());
         }
     }
-    
+
+    @Override
+    public void batchDeleteFiles(String backendName, String bucketName, List<String> objectKeys) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+
+        try {
+            S3Client s3Client = s3ClientUtil.createS3Client(backend);
+            String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
+
+            // 构建删除请求
+            List<ObjectIdentifier> objectIdentifiers = objectKeys.stream()
+                    .map(key -> ObjectIdentifier.builder().key(key).build())
+                    .collect(Collectors.toList());
+
+            Delete delete = Delete.builder()
+                    .objects(objectIdentifiers)
+                    .build();
+
+            DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
+                    .bucket(actualBucketName)
+                    .delete(delete)
+                    .build();
+
+            DeleteObjectsResponse response = s3Client.deleteObjects(deleteObjectsRequest);
+
+            log.info("批量删除文件成功 - backend: {}, bucket: {}, 删除数量: {}",
+                    backendName, actualBucketName, response.deleted().size());
+
+        } catch (Exception e) {
+            log.error("批量删除文件失败 - backend: {}, bucket: {}", backendName, bucketName, e);
+            throw new RuntimeException("批量删除文件失败: " + e.getMessage());
+        }
+    }
+
     private String generateObjectKey(String originalFilename) {
         String extension = FilenameUtils.getExtension(originalFilename);
         String baseName = FilenameUtils.getBaseName(originalFilename);
         String timestamp = String.valueOf(System.currentTimeMillis());
         return baseName + "_" + timestamp + "." + extension;
     }
-    
+
     private Map<String, Object> convertToFileInfo(S3Object s3Object) {
         Map<String, Object> fileInfo = new HashMap<>();
         fileInfo.put("key", s3Object.key());

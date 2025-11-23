@@ -1,6 +1,6 @@
 package com.all.in.one.agent.storage.exception;
 
-import com.all.in.one.agent.common.result.Result;
+import com.all.in.one.agent.storage.common.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;

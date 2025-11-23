@@ -1,0 +1,4 @@
+# 默认激活 storage profile
+spring:
+  profiles:
+    active: storage

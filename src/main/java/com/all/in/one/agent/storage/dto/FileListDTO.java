@@ -7,9 +7,9 @@ import lombok.Data;
  */
 @Data
 public class FileListDTO {
-    
-    private Long configId;
-    
+
+    private String backendName;
+
     private String bucketName;
     
     private String prefix;

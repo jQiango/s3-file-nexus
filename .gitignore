@@ -41,3 +41,6 @@ logs/
 # Application
 /tmp/
 /storage-cache/
+/CLAUDE.md
+/.claude/
+*.md

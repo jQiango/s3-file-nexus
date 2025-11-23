@@ -1,13 +1,9 @@
 package com.all.in.one.agent.storage.service;
 
+import com.all.in.one.agent.storage.config.StorageConfigProperties;
 import com.all.in.one.agent.storage.dto.FileListDTO;
-import com.all.in.one.agent.storage.dto.FileUploadDTO;
-import com.all.in.one.agent.storage.dto.StorageConfigDTO;
-import com.all.in.one.agent.storage.entity.StorageConfig;
-import com.all.in.one.agent.storage.entity.StorageFile;
-import org.springframework.web.multipart.MultipartFile;
-
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -16,84 +12,69 @@ import java.util.Map;
  * 存储服务接口
  */
 public interface StorageService {
-    
+
     /**
-     * 保存存储配置
+     * 获取所有后端配置列表
      */
-    StorageConfig saveConfig(StorageConfigDTO configDTO);
-    
+    Map<String, StorageConfigProperties.Backend> getAllBackends();
+
     /**
-     * 获取存储配置列表
+     * 获取指定后端配置
      */
-    List<StorageConfig> getConfigList();
-    
+    StorageConfigProperties.Backend getBackend(String backendName);
+
     /**
-     * 根据ID获取存储配置
+     * 获取默认后端配置
      */
-    StorageConfig getConfigById(Long id);
-    
-    /**
-     * 删除存储配置
-     */
-    void deleteConfig(Long id);
-    
+    StorageConfigProperties.Backend getDefaultBackend();
+
     /**
      * 测试存储配置连接
      */
-    boolean testConnection(StorageConfigDTO configDTO);
-    
+    boolean testConnection(String backendName);
+
     /**
      * 上传文件
      */
-    StorageFile uploadFile(MultipartFile file, FileUploadDTO uploadDTO);
-    
+    Map<String, Object> uploadFile(MultipartFile file, String backendName, String bucketName, String objectKey);
+
     /**
      * 下载文件
      */
-    void downloadFile(Long fileId, HttpServletResponse response);
-    
-    /**
-     * 通过对象键下载文件
-     */
-    void downloadFileByKey(Long configId, String bucketName, String objectKey, HttpServletResponse response);
-    
+    void downloadFile(String backendName, String bucketName, String objectKey, HttpServletResponse response);
+
     /**
      * 获取文件列表
      */
     Map<String, Object> listFiles(FileListDTO listDTO);
-    
+
     /**
      * 删除文件
      */
-    void deleteFile(Long fileId);
-    
+    void deleteFile(String backendName, String bucketName, String objectKey);
+
     /**
-     * 通过对象键删除文件
+     * 预览文件（流式输出，Content-Disposition=inline）
      */
-    void deleteFileByKey(Long configId, String bucketName, String objectKey);
-    
+    void previewFile(String backendName, String bucketName, String objectKey, HttpServletResponse response);
+
     /**
-     * 获取文件信息
+     * 获取预签名URL（用于临时访问）
      */
-    StorageFile getFileInfo(Long fileId);
-    
-    /**
-     * 获取文件预览URL
-     */
-    String getPreviewUrl(Long fileId);
-    
-    /**
-     * 按对象键直接预览（流式输出，Content-Disposition=inline）
-     */
-    void previewByKey(Long configId, String bucketName, String objectKey, HttpServletResponse response);
-    
+    String getPresignedUrl(String backendName, String bucketName, String objectKey, int expirationSeconds);
+
     /**
      * 创建文件夹
      */
-    void createFolder(Long configId, String bucketName, String folderPath);
-    
+    void createFolder(String backendName, String bucketName, String folderPath);
+
     /**
      * 获取存储桶列表
      */
-    List<String> listBuckets(Long configId);
+    List<String> listBuckets(String backendName);
+
+    /**
+     * 批量删除文件
+     */
+    void batchDeleteFiles(String backendName, String bucketName, List<String> objectKeys);
 }

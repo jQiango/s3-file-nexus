@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 文件管理系统</title>
+
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus@2.4.4/dist/index.css">
+
+    <!-- Element Plus Icons -->
+    <link rel="stylesheet" href="https://unpkg.com/@element-plus/icons-vue@2.1.0/dist/index.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+        }
+
+        #app {
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #409EFF 0%, #66b1ff 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .toolbar {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .breadcrumb-container {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .file-icon {
+            font-size: 20px;
+            margin-right: 8px;
+        }
+
+        .folder-icon {
+            color: #f39c12;
+        }
+
+        .file-name {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .file-name:hover {
+            color: #409EFF;
+        }
+
+        .stats-bar {
+            background: #f5f7fa;
+            padding: 12px 20px;
+            border-top: 1px solid #e4e7ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #606266;
+        }
+
+        .upload-area {
+            border: 2px dashed #d9d9d9;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover,
+        .upload-area.drag-over {
+            border-color: #409EFF;
+            background-color: #ecf5ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #c0c4cc;
+            margin-bottom: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #909399;
+        }
+
+        .empty-state i {
+            font-size: 80px;
+            color: #dcdfe6;
+            margin-bottom: 20px;
+        }
+
+        /* Element Plus 样式覆盖 */
+        .el-table .el-table__cell {
+            padding: 12px 0;
+        }
+
+        .el-breadcrumb {
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <i class="el-icon-folder-opened"></i>
+                    <span>S3 文件管理系统</span>
+                </div>
+                <div class="header-actions">
+                    <el-select
+                        v-model="currentBucket"
+                        placeholder="选择存储桶"
+                        @change="onBucketChange"
+                        style="width: 200px;"
+                        size="large">
+                        <el-option
+                            v-for="bucket in buckets"
+                            :key="bucket"
+                            :label="bucket"
+                            :value="bucket">
+                        </el-option>
+                    </el-select>
+                    <el-button
+                        type="info"
+                        :icon="Refresh"
+                        @click="loadFiles"
+                        circle
+                        size="large">
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="container">
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <el-input
+                        v-model="searchKeyword"
+                        placeholder="搜索文件..."
+                        :prefix-icon="Search"
+                        @keyup.enter="handleSearch"
+                        style="width: 300px;">
+                    </el-input>
+                    <el-button :icon="Search" @click="handleSearch">搜索</el-button>
+                </div>
+                <div class="toolbar-right">
+                    <el-button
+                        type="primary"
+                        :icon="FolderAdd"
+                        @click="showCreateFolderDialog">
+                        新建文件夹
+                    </el-button>
+                    <el-button
+                        type="success"
+                        :icon="Upload"
+                        @click="showUploadDialog">
+                        上传文件
+                    </el-button>
+                    <el-button
+                        type="danger"
+                        :icon="Delete"
+                        @click="handleBatchDelete"
+                        :disabled="selectedFiles.length === 0">
+                        删除 ({{ selectedFiles.length }})
+                    </el-button>
+                </div>
+            </div>
+
+            <!-- 面包屑导航 -->
+            <div class="breadcrumb-container" v-if="currentBucket">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item @click="navigateToPath('')">
+                        <el-icon><HomeFilled /></el-icon>
+                        根目录
+                    </el-breadcrumb-item>
+                    <el-breadcrumb-item
+                        v-for="(part, index) in pathParts"
+                        :key="index"
+                        @click="navigateToPath(getPathUpTo(index))">
+                        {{ part }}
+                    </el-breadcrumb-item>
+                </el-breadcrumb>
+            </div>
+
+            <!-- 文件列表 -->
+            <div class="file-table-container">
+                <el-table
+                    :data="sortedFiles"
+                    v-loading="loading"
+                    @selection-change="handleSelectionChange"
+                    style="width: 100%"
+                    :default-sort="{ prop: 'name', order: 'ascending' }"
+                    :height="tableHeight">
+                    <el-table-column type="selection" width="55"></el-table-column>
+
+                    <el-table-column label="名称" min-width="400" sortable>
+                        <template #default="scope">
+                            <div class="file-name" @click="handleFileClick(scope.row)">
+                                <i
+                                    :class="getFileIcon(scope.row)"
+                                    class="file-icon">
+                                </i>
+                                <span>{{ scope.row.name }}</span>
+                            </div>
+                        </template>
+                    </el-table-column>
+
+                    <el-table-column label="大小" width="120" sortable prop="size">
+                        <template #default="scope">
+                            {{ scope.row.isFolder ? '-' : formatFileSize(scope.row.size) }}
+                        </template>
+                    </el-table-column>
+
+                    <el-table-column label="修改时间" width="200" sortable prop="lastModified">
+                        <template #default="scope">
+                            {{ formatDate(scope.row.lastModified) }}
+                        </template>
+                    </el-table-column>
+
+                    <el-table-column label="操作" width="150" fixed="right">
+                        <template #default="scope">
+                            <el-button
+                                v-if="!scope.row.isFolder"
+                                type="primary"
+                                :icon="Download"
+                                link
+                                @click="downloadFile(scope.row)">
+                                下载
+                            </el-button>
+                            <el-button
+                                type="danger"
+                                :icon="Delete"
+                                link
+                                @click="deleteFile(scope.row)">
+                                删除
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <!-- 空状态 -->
+                <div v-if="!loading && files.length === 0" class="empty-state">
+                    <el-icon><FolderOpened /></el-icon>
+                    <p style="font-size: 18px; margin-top: 10px;">暂无文件</p>
+                    <p style="font-size: 14px; margin-top: 5px;">点击上传按钮添加文件</p>
+                </div>
+
+                <!-- 统计栏和分页 -->
+                <div class="stats-bar" v-if="files.length > 0">
+                    <div>
+                        已选择 <strong>{{ selectedFiles.length }}</strong> 项 |
+                        共 <strong>{{ totalCount }}</strong> 个文件
+                    </div>
+                    <el-pagination
+                        v-if="pagination.hasMore || pagination.currentPage > 1"
+                        small
+                        background
+                        layout="prev, pager, next"
+                        :current-page="pagination.currentPage"
+                        :page-size="pagination.pageSize"
+                        :total="pagination.total"
+                        @current-change="handlePageChange">
+                    </el-pagination>
+                </div>
+            </div>
+        </div>
+
+        <!-- 上传对话框 -->
+        <el-dialog
+            v-model="uploadDialogVisible"
+            title="上传文件"
+            width="600px"
+            :close-on-click-modal="false">
+            <div
+                class="upload-area"
+                :class="{ 'drag-over': dragOver }"
+                @click="$refs.fileInput.click()"
+                @dragover.prevent="dragOver = true"
+                @dragleave.prevent="dragOver = false"
+                @drop.prevent="handleFileDrop">
+                <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                <p style="font-size: 16px; margin-bottom: 8px;">点击或拖拽文件到此处上传</p>
+                <p style="font-size: 12px; color: #909399;">支持单个或批量上传</p>
+            </div>
+            <input
+                ref="fileInput"
+                type="file"
+                multiple
+                style="display: none"
+                @change="handleFileSelect">
+
+            <!-- 文件列表 -->
+            <div v-if="uploadFiles.length > 0" style="margin-top: 20px;">
+                <el-divider>待上传文件 ({{ uploadFiles.length }})</el-divider>
+                <div v-for="(file, index) in uploadFiles" :key="index" style="margin-bottom: 8px;">
+                    <el-tag>{{ file.name }} ({{ formatFileSize(file.size) }})</el-tag>
+                    <el-button
+                        type="danger"
+                        link
+                        @click="removeUploadFile(index)"
+                        style="margin-left: 10px;">
+                        移除
+                    </el-button>
+                </div>
+            </div>
+
+            <template #footer>
+                <el-button @click="uploadDialogVisible = false">取消</el-button>
+                <el-button
+                    type="primary"
+                    @click="doUploadFiles"
+                    :loading="uploading"
+                    :disabled="uploadFiles.length === 0">
+                    开始上传
+                </el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 新建文件夹对话框 -->
+        <el-dialog
+            v-model="folderDialogVisible"
+            title="新建文件夹"
+            width="500px">
+            <el-form>
+                <el-form-item label="文件夹名称">
+                    <el-input
+                        v-model="folderName"
+                        placeholder="请输入文件夹名称"
+                        @keyup.enter="createFolder">
+                    </el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="folderDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="createFolder">创建</el-button>
+            </template>
+        </el-dialog>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3.3.11/dist/vue.global.js"></script>
+
+    <!-- Element Plus -->
+    <script src="https://unpkg.com/element-plus@2.4.4/dist/index.full.js"></script>
+
+    <!-- Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue@2.1.0/dist/index.iife.js"></script>
+
+    <!-- Axios -->
+    <script src="https://unpkg.com/axios@1.6.2/dist/axios.min.js"></script>
+
+    <script src="/app.js"></script>
+</body>
+</html>

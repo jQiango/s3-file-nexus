@@ -1,7 +1,6 @@
 package com.all.in.one.agent.storage.util;
 
-import com.all.in.one.agent.storage.dto.StorageConfigDTO;
-import com.all.in.one.agent.storage.entity.StorageConfig;
+import com.all.in.one.agent.storage.config.StorageConfigProperties;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -17,37 +16,21 @@ import java.net.URI;
  */
 @Component
 public class S3ClientUtil {
-    
+
     /**
-     * 根据配置创建S3客户端
+     * 根据Backend配置创建S3客户端
      */
-    public S3Client createS3Client(StorageConfig config) {
-        return createS3Client(config.getEndpoint(), config.getAccessKeyId(), 
-                config.getAccessKeySecret(), config.getRegion());
-    }
-    
-    /**
-     * 根据DTO创建S3客户端
-     */
-    public S3Client createS3Client(StorageConfigDTO configDTO) {
-        return createS3Client(configDTO.getEndpoint(), configDTO.getAccessKeyId(), 
-                configDTO.getAccessKeySecret(), configDTO.getRegion());
+    public S3Client createS3Client(StorageConfigProperties.Backend backend) {
+        return createS3Client(backend.getEndpoint(), backend.getAccessKeyId(),
+                backend.getAccessKeySecret(), backend.getRegion());
     }
 
     /**
-     * 根据配置创建S3Presigner
+     * 根据Backend配置创建S3Presigner
      */
-    public S3Presigner createS3Presigner(StorageConfig config) {
-        return createS3Presigner(config.getEndpoint(), config.getAccessKeyId(),
-                config.getAccessKeySecret(), config.getRegion());
-    }
-
-    /**
-     * 根据DTO创建S3Presigner
-     */
-    public S3Presigner createS3Presigner(StorageConfigDTO configDTO) {
-        return createS3Presigner(configDTO.getEndpoint(), configDTO.getAccessKeyId(),
-                configDTO.getAccessKeySecret(), configDTO.getRegion());
+    public S3Presigner createS3Presigner(StorageConfigProperties.Backend backend) {
+        return createS3Presigner(backend.getEndpoint(), backend.getAccessKeyId(),
+                backend.getAccessKeySecret(), backend.getRegion());
     }
 
     /**

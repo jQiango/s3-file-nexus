@@ -4,6 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 存储配置属性
  */
@@ -11,26 +14,80 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "storage")
 public class StorageConfigProperties {
-    
+
+    /**
+     * 存储后端配置（支持多个）
+     * key为配置名称，value为具体配置
+     */
+    private Map<String, Backend> backends = new HashMap<>();
+
+    /**
+     * 默认使用的存储后端名称
+     */
+    private String defaultBackend;
+
     /**
      * 文件上传配置
      */
     private Upload upload = new Upload();
-    
+
     /**
      * 文件预览配置
      */
     private Preview preview = new Preview();
-    
+
     /**
      * 安全配置
      */
     private Security security = new Security();
-    
+
     /**
      * 缓存配置
      */
     private Cache cache = new Cache();
+
+    @Data
+    public static class Backend {
+        /**
+         * 配置名称
+         */
+        private String name;
+
+        /**
+         * 存储类型：S3, MINIO, OSS等
+         */
+        private String type;
+
+        /**
+         * 端点URL
+         */
+        private String endpoint;
+
+        /**
+         * 访问密钥ID
+         */
+        private String accessKeyId;
+
+        /**
+         * 访问密钥
+         */
+        private String accessKeySecret;
+
+        /**
+         * 区域
+         */
+        private String region;
+
+        /**
+         * 默认桶名
+         */
+        private String defaultBucket;
+
+        /**
+         * 是否启用
+         */
+        private Boolean enabled = true;
+    }
     
     @Data
     public static class Upload {

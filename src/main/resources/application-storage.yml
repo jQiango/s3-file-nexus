@@ -6,48 +6,57 @@ server:
 spring:
   application:
     name: one-agent-4j-storage
-  
-  # 数据库配置
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/one_agent_4j?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
-    
+
+  # 静态资源配置
+  web:
+    resources:
+      static-locations: classpath:/static/
+      add-mappings: true
+
   # 文件上传配置
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
       enabled: true
-      
-  # MyBatis-Plus配置
-  mybatis-plus:
-    configuration:
-      map-underscore-to-camel-case: true
-      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    global-config:
-      db-config:
-        logic-delete-field: deleted
-        logic-delete-value: 1
-        logic-not-delete-value: 0
+
+  # JSON序列化配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
 
 # 存储模块配置
 storage:
+  # 默认使用的存储后端
+  default-backend: lianjia-s3
+
+  # 存储后端配置
+  backends:
+    # 链家 S3 存储
+    lianjia-s3:
+      name: zqt-data-daily
+      type: S3
+      endpoint: https://storage.lianjia.com
+      access-key-id: 55DIWBJB0X4U249D8DD0
+      access-key-secret: 52NLJIBoVrGtC25xpIeREclO25pXIdjGEYtM83vT
+      region: ap-beijing
+      default-bucket: zqt-data-daily
+      enabled: true
+
   upload:
     max-file-size: 104857600  # 100MB
     max-file-count: 10
     temp-dir: /tmp/storage
     enable-multipart: true
     chunk-size: 5242880  # 5MB
-    
+
   preview:
     enabled: true
     url-expiration: 3600  # 1小时
     max-preview-size: 52428800  # 50MB
     max-text-lines: 1000
     thumbnail-size: 200
-    
+
   security:
     enable-file-type-check: true
     enable-file-size-limit: true
@@ -100,7 +109,7 @@ storage:
       - js
       - vbs
       - sh
-      
+
   cache:
     enabled: true
     expiration: 300  # 5分钟
