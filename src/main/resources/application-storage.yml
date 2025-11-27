@@ -37,23 +37,16 @@ storage:
 
   upload:
     max-file-size: 104857600  # 100MB
-    max-file-count: 10
     temp-dir: /tmp/storage
-    enable-multipart: true
-    chunk-size: 5242880  # 5MB
 
   preview:
     enabled: true
     url-expiration: 3600  # 1小时
-    max-preview-size: 52428800  # 50MB
-    max-text-lines: 1000
-    thumbnail-size: 200
 
   security:
     enable-file-type-check: true
     enable-file-size-limit: true
     enable-filename-sanitization: true
-    enable-virus-scan: false
     allowed-file-types:
       - jpg
       - jpeg

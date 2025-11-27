@@ -20,11 +20,8 @@
   <properties>
     <java.version>17</java.version>
     <lombok.version>1.18.30</lombok.version>
-    <fastjson2.version>2.0.57</fastjson2.version>
-    <commons-collections4.version>4.5.0</commons-collections4.version>
     <commons-io.version>2.15.1</commons-io.version>
     <aws.sdk.version>2.28.16</aws.sdk.version>
-    <minio.version>8.5.7</minio.version>
   </properties>
 
   <dependencies>
@@ -44,32 +41,14 @@
       <artifactId>s3</artifactId>
       <version>${aws.sdk.version}</version>
     </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>sts</artifactId>
-      <version>${aws.sdk.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.minio</groupId>
-      <artifactId>minio</artifactId>
-      <version>${minio.version}</version>
-    </dependency>
+    <!-- MinIO SDK已移除 - 项目使用AWS S3 SDK通过S3协议支持所有S3兼容存储 -->
+    <!-- 包括: AWS S3, MinIO, 阿里云OSS, 腾讯云COS, 华为云OBS, Cloudflare R2等 -->
 
     <!-- 工具 -->
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>${commons-io.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-collections4</artifactId>
-      <version>${commons-collections4.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.alibaba.fastjson2</groupId>
-      <artifactId>fastjson2</artifactId>
-      <version>${fastjson2.version}</version>
     </dependency>
 
     <!-- Lombok -->

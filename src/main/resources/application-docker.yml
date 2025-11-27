@@ -6,17 +6,6 @@ spring:
   application:
     name: s3-file-nexus
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/s3_nexus?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:s3nexus123}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-
   servlet:
     multipart:
       max-file-size: 100MB
@@ -26,17 +15,69 @@ spring:
 storage:
   upload:
     max-file-size: 104857600
-    chunk-size: 5242880
-    temp-dir: /app/data/temp
+    temp-dir: /tmp/storage
 
   preview:
+    enabled: true
     url-expiration: 3600
-    max-size: 10485760
 
   cache:
-    ttl: 300
+    enabled: true
+    expiration: 300
     max-entries: 1000
-    cache-dir: /app/cache
+    cache-dir: /tmp/storage-cache
+
+  security:
+    enable-file-type-check: true
+    enable-file-size-limit: true
+    enable-filename-sanitization: true
+    allowed-file-types:
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - bmp
+      - webp
+      - svg
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - json
+      - xml
+      - yaml
+      - yml
+      - zip
+      - rar
+      - 7z
+      - tar
+      - gz
+      - mp3
+      - wav
+      - ogg
+      - flac
+      - mp4
+      - avi
+      - mov
+      - wmv
+      - flv
+      - webm
+    forbidden-file-types:
+      - exe
+      - bat
+      - cmd
+      - com
+      - pif
+      - scr
+      - jar
+      - js
+      - vbs
+      - sh
 
   # MinIO配置
   backends:
@@ -55,11 +96,8 @@ logging:
   level:
     root: INFO
     com.all.in.one.agent.storage: INFO
-  file:
-    name: /app/logs/s3-nexus.log
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
 # Actuator
 management:
