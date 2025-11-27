@@ -1,0 +1,48 @@
+# Docker ignore file for S3 File Nexus
+
+# Git
+.git
+.gitignore
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# OS
+Thumbs.db
+.directory
+
+# Backup
+*.bak
+*.backup

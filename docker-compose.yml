@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # S3 File Nexus Application
+  s3-nexus:
+    build: .
+    container_name: s3-file-nexus
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/s3_nexus?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=s3nexus123
+      - STORAGE_BACKENDS_MINIO_ENDPOINT=http://minio:9000
+      - STORAGE_BACKENDS_MINIO_ACCESS_KEY_ID=minioadmin
+      - STORAGE_BACKENDS_MINIO_ACCESS_KEY_SECRET=minioadmin
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - s3-nexus-network
+    volumes:
+      - nexus-data:/app/data
+      - nexus-cache:/app/cache
+      - nexus-logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: s3-nexus-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=s3nexus123
+      - MYSQL_DATABASE=s3_nexus
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    networks:
+      - s3-nexus-network
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./src/main/resources/init/storage.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ps3nexus123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: s3-nexus-minio
+    ports:
+      - "9000:9000"      # API端口
+      - "9001:9001"      # Console端口
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    networks:
+      - s3-nexus-network
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+
+networks:
+  s3-nexus-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
+  minio-data:
+    driver: local
+  nexus-data:
+    driver: local
+  nexus-cache:
+    driver: local
+  nexus-logs:
+    driver: local
