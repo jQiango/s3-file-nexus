@@ -264,6 +264,24 @@ public class StorageController {
     }
 
     /**
+     * 重命名文件或文件夹
+     */
+    @PutMapping("/files/rename")
+    public Result<Void> renameFile(
+            @RequestParam String bucketName,
+            @RequestParam String oldKey,
+            @RequestParam String newKey) {
+        try {
+            String backendKey = storageService.getDefaultBackendKey();
+            storageService.renameFile(backendKey, bucketName, oldKey, newKey);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("重命名文件失败 - oldKey: {}, newKey: {}", oldKey, newKey, e);
+            return Result.error("重命名文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 搜索文件
      */
     @GetMapping("/search")
@@ -321,6 +339,67 @@ public class StorageController {
         } catch (Exception e) {
             log.error("搜索文件失败", e);
             return Result.error("搜索文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取文件的预签名URL（用于分享）
+     */
+    @GetMapping("/share")
+    public Result<Map<String, Object>> getShareUrl(
+            @RequestParam String bucketName,
+            @RequestParam String objectKey,
+            @RequestParam(defaultValue = "3600") int expirationSeconds) {
+        try {
+            String backendKey = storageService.getDefaultBackendKey();
+
+            // 验证过期时间（最长7天）
+            if (expirationSeconds > 7 * 24 * 3600) {
+                return Result.error("过期时间不能超过7天");
+            }
+            if (expirationSeconds < 60) {
+                return Result.error("过期时间不能少于60秒");
+            }
+
+            String presignedUrl = storageService.getPresignedUrl(backendKey, bucketName, objectKey, expirationSeconds);
+
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("url", presignedUrl);
+            result.put("expirationSeconds", expirationSeconds);
+            result.put("expiresAt", System.currentTimeMillis() + (expirationSeconds * 1000L));
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("获取分享链接失败 - bucketName: {}, objectKey: {}", bucketName, objectKey, e);
+            return Result.error("获取分享链接失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 计算文件夹大小
+     */
+    @GetMapping("/folder/size")
+    public Result<Map<String, Object>> calculateFolderSize(
+            @RequestParam String bucketName,
+            @RequestParam String folderPath) {
+        try {
+            String backendKey = storageService.getDefaultBackendKey();
+
+            // 确保文件夹路径以/结尾
+            if (!folderPath.endsWith("/")) {
+                folderPath += "/";
+            }
+
+            long totalSize = storageService.calculateFolderSize(backendKey, bucketName, folderPath);
+
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("folderPath", folderPath);
+            result.put("totalSize", totalSize);
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("计算文件夹大小失败 - bucketName: {}, folderPath: {}", bucketName, folderPath, e);
+            return Result.error("计算文件夹大小失败: " + e.getMessage());
         }
     }
 }

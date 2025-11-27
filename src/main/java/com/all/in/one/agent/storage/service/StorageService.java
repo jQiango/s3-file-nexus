@@ -82,4 +82,14 @@ public interface StorageService {
      * 批量删除文件
      */
     void batchDeleteFiles(String backendName, String bucketName, List<String> objectKeys);
+
+    /**
+     * 重命名文件或文件夹
+     */
+    void renameFile(String backendName, String bucketName, String oldKey, String newKey);
+
+    /**
+     * 计算文件夹大小（递归计算所有子文件）
+     */
+    long calculateFolderSize(String backendName, String bucketName, String folderPath);
 }

@@ -625,4 +625,179 @@ public class StorageServiceImpl implements StorageService {
         fileInfo.put("storageClass", s3Object.storageClassAsString());
         return fileInfo;
     }
+
+    @Override
+    public void renameFile(String backendName, String bucketName, String oldKey, String newKey) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+        String actualBucket = (bucketName != null && !bucketName.isEmpty()) ? bucketName : backend.getDefaultBucket();
+
+        if (actualBucket == null || actualBucket.isEmpty()) {
+            throw new RuntimeException("存储桶名称不能为空");
+        }
+
+        log.info("开始重命名文件: bucket={}, oldKey={}, newKey={}", actualBucket, oldKey, newKey);
+
+        try (S3Client s3Client = s3ClientUtil.createS3Client(backend)) {
+            // 检查源文件是否存在
+            try {
+                s3Client.headObject(HeadObjectRequest.builder()
+                        .bucket(actualBucket)
+                        .key(oldKey)
+                        .build());
+            } catch (NoSuchKeyException e) {
+                throw new RuntimeException("源文件不存在: " + oldKey);
+            }
+
+            // 检查目标文件是否已存在
+            try {
+                s3Client.headObject(HeadObjectRequest.builder()
+                        .bucket(actualBucket)
+                        .key(newKey)
+                        .build());
+                throw new RuntimeException("目标文件已存在: " + newKey);
+            } catch (NoSuchKeyException e) {
+                // 目标不存在，可以继续
+            }
+
+            // 如果是文件夹（以 / 结尾），需要递归重命名所有子对象
+            if (oldKey.endsWith("/")) {
+                renameFolder(s3Client, actualBucket, oldKey, newKey);
+            } else {
+                // 普通文件：复制 + 删除
+                CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                        .sourceBucket(actualBucket)
+                        .sourceKey(oldKey)
+                        .destinationBucket(actualBucket)
+                        .destinationKey(newKey)
+                        .build();
+
+                s3Client.copyObject(copyRequest);
+                log.info("文件复制成功: {} -> {}", oldKey, newKey);
+
+                // 删除源文件
+                DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                        .bucket(actualBucket)
+                        .key(oldKey)
+                        .build();
+
+                s3Client.deleteObject(deleteRequest);
+                log.info("源文件删除成功: {}", oldKey);
+            }
+
+            log.info("文件重命名完成: {} -> {}", oldKey, newKey);
+        } catch (Exception e) {
+            log.error("重命名文件失败: oldKey={}, newKey={}", oldKey, newKey, e);
+            throw new RuntimeException("重命名文件失败: " + e.getMessage(), e);
+        }
+    }
+
+    private void renameFolder(S3Client s3Client, String bucket, String oldPrefix, String newPrefix) {
+        log.info("开始重命名文件夹: oldPrefix={}, newPrefix={}", oldPrefix, newPrefix);
+
+        // 列出所有以 oldPrefix 开头的对象
+        ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
+                .bucket(bucket)
+                .prefix(oldPrefix)
+                .build();
+
+        ListObjectsV2Response listResponse;
+        int totalCount = 0;
+
+        do {
+            listResponse = s3Client.listObjectsV2(listRequest);
+            List<S3Object> objects = listResponse.contents();
+
+            for (S3Object s3Object : objects) {
+                String oldKey = s3Object.key();
+                String newKey = oldKey.replaceFirst("^" + oldPrefix, newPrefix);
+
+                // 复制对象
+                CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                        .sourceBucket(bucket)
+                        .sourceKey(oldKey)
+                        .destinationBucket(bucket)
+                        .destinationKey(newKey)
+                        .build();
+
+                s3Client.copyObject(copyRequest);
+
+                // 删除源对象
+                DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(oldKey)
+                        .build();
+
+                s3Client.deleteObject(deleteRequest);
+
+                totalCount++;
+                log.debug("文件夹内对象重命名: {} -> {}", oldKey, newKey);
+            }
+
+            // 如果有更多对象，继续列表
+            if (listResponse.isTruncated()) {
+                listRequest = ListObjectsV2Request.builder()
+                        .bucket(bucket)
+                        .prefix(oldPrefix)
+                        .continuationToken(listResponse.nextContinuationToken())
+                        .build();
+            }
+        } while (listResponse.isTruncated());
+
+        log.info("文件夹重命名完成，共处理 {} 个对象", totalCount);
+    }
+
+    @Override
+    public long calculateFolderSize(String backendName, String bucketName, String folderPath) {
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+        String actualBucket = (bucketName != null && !bucketName.isEmpty()) ? bucketName : backend.getDefaultBucket();
+
+        if (actualBucket == null || actualBucket.isEmpty()) {
+            throw new RuntimeException("存储桶名称不能为空");
+        }
+
+        log.info("开始计算文件夹大小: bucket={}, folderPath={}", actualBucket, folderPath);
+
+        try (S3Client s3Client = s3ClientUtil.createS3Client(backend)) {
+            long totalSize = 0;
+            int fileCount = 0;
+
+            // 列出文件夹下所有文件（递归）
+            ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
+                    .bucket(actualBucket)
+                    .prefix(folderPath)
+                    .build();
+
+            ListObjectsV2Response listResponse;
+
+            do {
+                listResponse = s3Client.listObjectsV2(listRequest);
+
+                for (S3Object s3Object : listResponse.contents()) {
+                    // 跳过文件夹标记本身
+                    if (!s3Object.key().endsWith("/")) {
+                        totalSize += s3Object.size();
+                        fileCount++;
+                    }
+                }
+
+                // 如果有更多数据，继续获取
+                if (listResponse.isTruncated()) {
+                    listRequest = ListObjectsV2Request.builder()
+                            .bucket(actualBucket)
+                            .prefix(folderPath)
+                            .continuationToken(listResponse.nextContinuationToken())
+                            .build();
+                }
+
+            } while (listResponse.isTruncated());
+
+            log.info("文件夹大小计算完成: folderPath={}, totalSize={}, fileCount={}", folderPath, totalSize, fileCount);
+
+            return totalSize;
+
+        } catch (Exception e) {
+            log.error("计算文件夹大小失败: bucket={}, folderPath={}", actualBucket, folderPath, e);
+            throw new RuntimeException("计算文件夹大小失败: " + e.getMessage(), e);
+        }
+    }
 }
