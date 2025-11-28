@@ -1,6 +1,7 @@
 package com.all.in.one.agent.storage.controller;
 
 import com.all.in.one.agent.storage.common.Result;
+import com.all.in.one.agent.storage.config.DynamicConfigManager;
 import com.all.in.one.agent.storage.config.StorageConfigProperties;
 import com.all.in.one.agent.storage.dto.FileListDTO;
 import com.all.in.one.agent.storage.service.StorageService;
@@ -22,9 +23,11 @@ import java.util.Map;
 public class StorageController {
 
     private final StorageService storageService;
+    private final DynamicConfigManager dynamicConfigManager;
 
-    public StorageController(StorageService storageService) {
+    public StorageController(StorageService storageService, DynamicConfigManager dynamicConfigManager) {
         this.storageService = storageService;
+        this.dynamicConfigManager = dynamicConfigManager;
     }
 
     /**
@@ -400,6 +403,69 @@ public class StorageController {
         } catch (Exception e) {
             log.error("计算文件夹大小失败 - bucketName: {}, folderPath: {}", bucketName, folderPath, e);
             return Result.error("计算文件夹大小失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新动态配置
+     */
+    @PostMapping("/config/update")
+    public Result<Void> updateConfig(@RequestBody Map<String, String> config) {
+        try {
+            String endpoint = config.get("endpoint");
+            String accessKey = config.get("accessKey");
+            String secretKey = config.get("secretKey");
+            String region = config.getOrDefault("region", "us-east-1");
+            String defaultBucket = config.get("bucket");
+
+            // 验证必填字段
+            if (endpoint == null || endpoint.isEmpty()) {
+                return Result.error("Endpoint 不能为空");
+            }
+            if (accessKey == null || accessKey.isEmpty()) {
+                return Result.error("Access Key 不能为空");
+            }
+            if (secretKey == null || secretKey.isEmpty()) {
+                return Result.error("Secret Key 不能为空");
+            }
+
+            // 更新动态配置
+            dynamicConfigManager.updateDynamicConfig(endpoint, accessKey, secretKey, region, defaultBucket);
+
+            log.info("动态配置更新成功: endpoint={}", endpoint);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("更新动态配置失败", e);
+            return Result.error("更新配置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 测试配置连接
+     */
+    @PostMapping("/config/test")
+    public Result<Void> testConfig(@RequestBody Map<String, String> config) {
+        try {
+            String endpoint = config.get("endpoint");
+            String accessKey = config.get("accessKey");
+            String secretKey = config.get("secretKey");
+            String region = config.getOrDefault("region", "us-east-1");
+            String defaultBucket = config.get("bucket");
+
+            // 临时更新配置
+            dynamicConfigManager.updateDynamicConfig(endpoint, accessKey, secretKey, region, defaultBucket);
+
+            // 测试连接
+            boolean success = storageService.testConnection("dynamic");
+
+            if (success) {
+                return Result.success();
+            } else {
+                return Result.error("连接测试失败");
+            }
+        } catch (Exception e) {
+            log.error("测试配置连接失败", e);
+            return Result.error("连接测试失败: " + e.getMessage());
         }
     }
 }

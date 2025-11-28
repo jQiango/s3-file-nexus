@@ -32,8 +32,8 @@ spring:
 
 # 存储模块配置
 storage:
-  # 默认使用的存储后端
-  default-backend: zqt-data-daily
+  # 默认使用的存储后端（如果不使用动态配置，可以配置这里）
+  default-backend: dynamic
 
   upload:
     max-file-size: 104857600  # 100MB
@@ -100,6 +100,19 @@ storage:
     expiration: 300  # 5分钟
     max-entries: 1000
     cache-dir: /tmp/storage-cache
+
+  # S3存储后端配置
+  # dynamic 为动态配置的占位符，实际配置从前端传入
+  backends:
+    dynamic:
+      name: Dynamic Config
+      type: S3
+      endpoint: ${S3_ENDPOINT:https://s3.amazonaws.com}
+      access-key-id: ${S3_ACCESS_KEY:}
+      access-key-secret: ${S3_SECRET_KEY:}
+      region: ${S3_REGION:us-east-1}
+      default-bucket: ${S3_DEFAULT_BUCKET:}
+      enabled: true
 
 # 日志配置
 logging:
