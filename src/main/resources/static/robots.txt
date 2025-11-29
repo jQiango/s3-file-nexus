@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# S3 File Manager - Allow all crawlers

@@ -1,0 +1,17 @@
+{
+  "name": "S3 文件管理器",
+  "short_name": "S3 Manager",
+  "description": "功能强大的S3对象存储文件管理器",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

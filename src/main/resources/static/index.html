@@ -5,18 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S3 文件管理器</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
 
-    <!-- Bootstrap Icons - BootCDN -->
-    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    <!-- Bootstrap Icons - jsDelivr (主CDN) with Unpkg fallback -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+          onerror="this.onerror=null;this.href='https://unpkg.com/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'">
 
-    <!-- Highlight.js - Code Syntax Highlighting -->
-    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-    <script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Highlight.js - Code Syntax Highlighting (jsDelivr) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
 
-    <!-- Marked.js - Markdown Parser -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <!-- Marked.js - Markdown Parser (jsDelivr) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (Official CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -228,36 +230,48 @@
         .context-menu {
             position: fixed;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            padding: 4px;
-            min-width: 180px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            padding: 6px;
+            min-width: 200px;
             z-index: 9999;
-            border: 1px solid #e5e7eb;
+            backdrop-filter: blur(10px);
         }
         .context-menu-item {
-            padding: 8px 12px;
+            padding: 10px 14px;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             font-size: 14px;
             color: #374151;
-            transition: all 0.15s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+        .context-menu-item i {
+            font-size: 16px;
+            width: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .context-menu-item:hover {
             background: #f3f4f6;
             color: #1f2937;
+            transform: translateX(2px);
+        }
+        .context-menu-item.danger {
+            color: #dc2626;
         }
         .context-menu-item.danger:hover {
             background: #fee2e2;
-            color: #dc2626;
+            color: #b91c1c;
         }
         .context-menu-divider {
             height: 1px;
             background: #e5e7eb;
-            margin: 4px 0;
+            margin: 6px 8px;
         }
 
         /* 复选框简单优化 */
@@ -266,6 +280,162 @@
             height: 16px;
             cursor: pointer;
             accent-color: #3b82f6;
+        }
+
+        /* 统一按钮动效系统 */
+        button, .button {
+            position: relative;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 禁用按钮样式 */
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        /* 主要按钮（带渐变背景）hover效果 - 向上浮动 */
+        button:not(:disabled)[class*="bg-gradient"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        button:not(:disabled)[class*="bg-gradient"]:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 次要按钮（无背景/灰色背景）hover效果 - 轻微缩放 */
+        button:not(:disabled):not([class*="bg-gradient"]):hover {
+            transform: scale(1.02);
+        }
+
+        button:not(:disabled):not([class*="bg-gradient"]):active {
+            transform: scale(0.98);
+        }
+
+        /* 卡片式可点击元素通用hover效果 */
+        button[class*="rounded-xl"]:not(:disabled):hover,
+        .file-card:not(.selected):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        button[class*="rounded-xl"]:not(:disabled):active,
+        .file-card:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 工具栏小按钮hover效果 */
+        [class*="toolbar"] button:not(:disabled):hover,
+        [class*="flex"] > button:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 关闭按钮（X）hover效果 - 旋转 */
+        button:hover .bi-x-lg,
+        button:hover .bi-x {
+            transform: rotate(90deg);
+            transition: transform 0.2s ease;
+        }
+
+        /* 刷新按钮旋转效果 */
+        button:hover .bi-arrow-clockwise,
+        button:hover .bi-arrow-repeat {
+            animation: spin 0.6s linear;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 删除按钮抖动效果 */
+        button:hover .bi-trash,
+        button:hover .bi-trash3 {
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px) rotate(-5deg); }
+            75% { transform: translateX(2px) rotate(5deg); }
+        }
+
+        /* 下载按钮向下移动效果 */
+        button:hover .bi-download {
+            animation: download 0.6s ease;
+        }
+
+        @keyframes download {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(3px); }
+        }
+
+        /* 文件夹按钮弹跳效果 */
+        button:hover .bi-folder-fill,
+        button:hover .bi-folder2-open {
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        /* 复选框打勾动画 */
+        button:hover .bi-check-lg,
+        button:hover .bi-check-circle-fill {
+            animation: checkPulse 0.3s ease;
+        }
+
+        @keyframes checkPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* 上传按钮向上移动效果 */
+        button:hover .bi-upload,
+        button:hover .bi-cloud-upload {
+            animation: upload 0.6s ease;
+        }
+
+        @keyframes upload {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        /* 箭头按钮移动效果 */
+        button:hover .bi-chevron-right {
+            animation: slideRight 0.3s ease;
+        }
+
+        button:hover .bi-chevron-left {
+            animation: slideLeft 0.3s ease;
+        }
+
+        @keyframes slideRight {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(3px); }
+        }
+
+        @keyframes slideLeft {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-3px); }
+        }
+
+        /* 眼睛预览按钮闪烁效果 */
+        button:hover .bi-eye,
+        button:hover .bi-eye-fill {
+            animation: blink 0.5s ease;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         /* 选中的文件卡片样式 */
@@ -813,32 +983,97 @@
 
         <!-- 删除确认对话框 -->
         <div v-if="showDeleteDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showDeleteDialog = false">
-            <div class="bg-gradient-to-br from-white to-red-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-red-200">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/30">
-                        <i class="bi bi-exclamation-triangle text-white text-2xl"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-gray-900 to-red-900 bg-clip-text text-transparent">确认删除</h3>
-                        <p class="text-sm text-gray-600 mt-1">此操作不可恢复</p>
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
+                <!-- 标题栏 -->
+                <div class="flex items-center justify-between p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30">
+                            <i class="bi bi-exclamation-triangle text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">确认删除</h3>
+                            <p class="text-sm text-gray-500 mt-1">此操作不可恢复</p>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div class="flex items-center gap-3">
+
+                <!-- 内容区 -->
+                <div class="px-6 pb-6">
+                    <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
                         <i :class="[getFileIcon(fileToDelete), getFileColor(fileToDelete)]" class="text-2xl"></i>
                         <div class="flex-1 min-w-0">
                             <p class="font-medium text-gray-900 truncate">{{ fileToDelete?.name }}</p>
-                            <p class="text-xs text-gray-600 mt-0.5">
+                            <p class="text-xs text-gray-500 mt-0.5">
                                 {{ fileToDelete?.isFolder ? '文件夹' : formatFileSize(fileToDelete?.size) }}
                             </p>
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-end gap-3">
-                    <button @click="showDeleteDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
-                    <button @click="confirmDelete" class="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 flex items-center gap-2 transition-all duration-200 shadow-lg shadow-red-500/30">
+
+                <!-- 底部操作栏 -->
+                <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50">
+                    <button @click="showDeleteDialog = false"
+                            class="px-5 py-2.5 text-gray-700 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-200">
+                        取消
+                    </button>
+                    <button @click="confirmDelete"
+                            class="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 font-medium">
                         <i class="bi bi-trash"></i>
-                        确认删除
+                        <span>确认删除</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 批量删除确认对话框 -->
+        <div v-if="showBatchDeleteDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showBatchDeleteDialog = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
+                <!-- 标题栏 -->
+                <div class="flex items-center justify-between p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30">
+                            <i class="bi bi-exclamation-triangle text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">批量删除确认</h3>
+                            <p class="text-sm text-gray-500 mt-1">此操作不可恢复</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 内容区 -->
+                <div class="px-6 pb-6">
+                    <div class="flex items-start gap-3 px-4 py-3 bg-amber-50 rounded-xl border border-amber-200 mb-4">
+                        <i class="bi bi-info-circle text-amber-600 text-lg flex-shrink-0 mt-0.5"></i>
+                        <div class="text-sm text-amber-900">
+                            <p class="font-medium">即将删除 <span class="font-bold text-amber-700">{{ selectedFilesCount }}</span> 个文件</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        <div v-for="file in selectedFilesList.slice(0, 5)" :key="file.key"
+                             class="flex items-center gap-3 px-4 py-2.5 bg-gray-50 rounded-lg border border-gray-200">
+                            <i :class="[getFileIcon(file), getFileColor(file)]" class="text-xl"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ file.name }}</p>
+                            </div>
+                        </div>
+                        <div v-if="selectedFilesCount > 5" class="text-center py-2 text-sm text-gray-500">
+                            还有 {{ selectedFilesCount - 5 }} 个文件...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50">
+                    <button @click="showBatchDeleteDialog = false"
+                            class="px-5 py-2.5 text-gray-700 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-200">
+                        取消
+                    </button>
+                    <button @click="confirmBatchDelete"
+                            class="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 font-medium">
+                        <i class="bi bi-trash"></i>
+                        <span>确认删除全部</span>
                     </button>
                 </div>
             </div>
@@ -846,41 +1081,53 @@
 
         <!-- 重命名对话框 -->
         <div v-if="showRenameDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showRenameDialog = false">
-            <div class="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-purple-200">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
-                        <i class="bi bi-pencil-square text-white text-2xl"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-gray-900 to-purple-900 bg-clip-text text-transparent">重命名</h3>
-                        <p class="text-sm text-gray-600 mt-1">{{ fileToRename?.isFolder ? '文件夹' : '文件' }}</p>
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
+                <!-- 标题栏 -->
+                <div class="flex items-center justify-between p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                            <i class="bi bi-pencil-square text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">重命名</h3>
+                            <p class="text-sm text-gray-500 mt-1">{{ fileToRename?.isFolder ? '文件夹' : '文件' }}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div class="flex items-center gap-3">
+
+                <!-- 内容区 -->
+                <div class="px-6 pb-6 space-y-4">
+                    <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
                         <i :class="[getFileIcon(fileToRename), getFileColor(fileToRename)]" class="text-2xl"></i>
                         <div class="flex-1 min-w-0">
                             <p class="font-medium text-gray-900 truncate">{{ fileToRename?.name }}</p>
-                            <p class="text-xs text-gray-600 mt-0.5">
+                            <p class="text-xs text-gray-500 mt-0.5">
                                 {{ fileToRename?.isFolder ? '文件夹' : formatFileSize(fileToRename?.size) }}
                             </p>
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">新名称</label>
+                        <input
+                            v-model="newFileName"
+                            type="text"
+                            placeholder="请输入新名称"
+                            @keyup.enter="confirmRename"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                    </div>
                 </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">新名称</label>
-                    <input
-                        v-model="newFileName"
-                        type="text"
-                        placeholder="请输入新名称"
-                        @keyup.enter="confirmRename"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all duration-200">
-                </div>
-                <div class="flex justify-end gap-3">
-                    <button @click="showRenameDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
-                    <button @click="confirmRename" :disabled="!newFileName.trim()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-purple-500/30">
+
+                <!-- 底部操作栏 -->
+                <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50">
+                    <button @click="showRenameDialog = false"
+                            class="px-5 py-2.5 text-gray-700 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-200">
+                        取消
+                    </button>
+                    <button @click="confirmRename"
+                            :disabled="!newFileName.trim()"
+                            class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 font-medium">
                         <i class="bi bi-check-lg"></i>
-                        确认重命名
+                        <span>确认重命名</span>
                     </button>
                 </div>
             </div>
@@ -1097,6 +1344,268 @@
             </div>
         </div>
 
+        <!-- 批量移动对话框 -->
+        <div v-if="showBatchMoveDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showBatchMoveDialog = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[75vh] flex flex-col animate-slide-up">
+                <!-- 标题栏 -->
+                <div class="flex items-center justify-between p-5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                            <i class="bi bi-folder-symlink text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">批量移动文件</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">已选择 {{ selectedFilesCount }} 个文件</p>
+                        </div>
+                    </div>
+                    <button @click="showBatchMoveDialog = false" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <!-- 主内容区 -->
+                <div class="flex-1 overflow-y-auto px-5 pb-5">
+                    <!-- 提示信息 -->
+                    <div class="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+                        <i class="bi bi-info-circle text-amber-600 flex-shrink-0 mt-0.5"></i>
+                        <p class="text-xs text-amber-900">移动后将从原位置删除</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <i class="bi bi-folder2-open text-purple-600"></i>
+                            选择目标文件夹
+                        </h4>
+
+                        <!-- 加载状态 -->
+                        <div v-if="loadingFolders" class="flex flex-col items-center justify-center py-8">
+                            <i class="bi bi-arrow-clockwise text-3xl text-purple-500 animate-spin mb-2"></i>
+                            <p class="text-xs text-gray-600">加载文件夹列表...</p>
+                        </div>
+
+                        <!-- 文件夹树 -->
+                        <div v-else class="space-y-1.5">
+                            <!-- 根目录 -->
+                            <button
+                                @click="selectedTargetFolder = ''"
+                                :class="selectedTargetFolder === '' ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200 hover:border-purple-200'"
+                                class="w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-left group">
+                                <i class="bi bi-house-fill text-gray-600 group-hover:text-purple-600 transition-colors"></i>
+                                <span class="text-sm font-medium text-gray-900 flex-1">/ (根目录)</span>
+                                <i v-if="selectedTargetFolder === ''" class="bi bi-check-circle-fill text-purple-600"></i>
+                                <i v-else class="bi bi-chevron-right text-xs text-gray-400 group-hover:text-purple-600 transition-colors"></i>
+                            </button>
+
+                            <!-- 文件夹列表 -->
+                            <div v-for="folder in folderTree" :key="folder.key">
+                                <div class="flex items-center gap-2"
+                                     :style="{ paddingLeft: (folder.level * 24) + 'px' }">
+                                    <!-- 展开/折叠按钮 -->
+                                    <button
+                                        v-if="folder.hasChildren"
+                                        @click.stop="toggleFolder(folder)"
+                                        class="w-6 h-6 flex items-center justify-center hover:bg-purple-100 rounded transition-colors flex-shrink-0">
+                                        <i v-if="loadingSubFolders.has(folder.key)" class="bi bi-arrow-clockwise text-xs animate-spin text-purple-600"></i>
+                                        <i v-else :class="expandedFolders.has(folder.key) ? 'bi-chevron-down' : 'bi-chevron-right'" class="text-xs text-gray-500"></i>
+                                    </button>
+                                    <div v-else class="w-6"></div>
+
+                                    <!-- 文件夹按钮 -->
+                                    <button
+                                        @click="selectedTargetFolder = folder.key"
+                                        :disabled="folder.key === currentPath || selectedFilesList.some(f => f.key === folder.key)"
+                                        :class="[
+                                            selectedTargetFolder === folder.key ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200 hover:border-purple-200',
+                                            (folder.key === currentPath || selectedFilesList.some(f => f.key === folder.key)) ? 'opacity-40 cursor-not-allowed' : ''
+                                        ]"
+                                        class="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-left group">
+                                        <i :class="expandedFolders.has(folder.key) ? 'bi-folder2-open' : 'bi-folder-fill'" class="text-xl text-blue-500"></i>
+                                        <span class="text-sm font-medium text-gray-900 flex-1 truncate">{{ folder.name }}</span>
+                                        <span v-if="folder.key === currentPath" class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded text-xs">(当前)</span>
+                                        <i v-else-if="selectedTargetFolder === folder.key" class="bi bi-check-circle-fill text-purple-600"></i>
+                                        <i v-else class="bi bi-chevron-right text-xs text-gray-400 group-hover:text-purple-600 transition-colors"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 空状态 -->
+                            <div v-if="folderTree.length === 0" class="text-center py-8 text-gray-400">
+                                <i class="bi bi-folder2-open text-4xl mb-2 opacity-30"></i>
+                                <p class="text-xs">当前bucket没有文件夹</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="flex items-center justify-between p-5 border-t border-gray-100 bg-gray-50">
+                    <div></div>
+                    <div class="flex gap-2">
+                        <button @click="showBatchMoveDialog = false"
+                                class="px-4 py-2 text-gray-700 hover:bg-white rounded-lg transition-all border border-transparent hover:border-gray-200">
+                            取消
+                        </button>
+                        <button @click="confirmBatchMove"
+                                :disabled="selectedTargetFolder === null"
+                                class="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-purple-500/20 flex items-center gap-1.5 font-medium text-sm">
+                            <i class="bi bi-check-lg"></i>
+                            <span>开始移动</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 批量复制到其他Bucket对话框 -->
+        <div v-if="showBatchCopyDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showBatchCopyDialog = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[75vh] flex flex-col animate-slide-up">
+                <!-- 标题栏 -->
+                <div class="flex items-center justify-between p-5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+                            <i class="bi bi-files text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">跨Bucket复制文件</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">已选择 {{ selectedFilesCount }} 个文件</p>
+                        </div>
+                    </div>
+                    <button @click="showBatchCopyDialog = false"
+                            class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <!-- 步骤指示器 -->
+                <div class="px-5 pb-3">
+                    <div class="flex items-center mb-2">
+                        <div v-for="step in 2" :key="step" class="flex items-center" :class="step < 2 ? 'flex-1' : ''">
+                            <div :class="[
+                                'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all',
+                                copyStep >= step ? 'bg-green-600 text-white shadow-lg shadow-green-500/30' : 'bg-gray-200 text-gray-500'
+                            ]">
+                                {{ step }}
+                            </div>
+                            <div v-if="step < 2" :class="[
+                                'flex-1 h-1 mx-2 rounded transition-all',
+                                copyStep > step ? 'bg-green-600' : 'bg-gray-200'
+                            ]"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between px-0.5">
+                        <span class="text-xs" :class="copyStep === 1 ? 'font-semibold text-green-700' : 'text-gray-500'">确认文件</span>
+                        <span class="text-xs" :class="copyStep === 2 ? 'font-semibold text-green-700' : 'text-gray-500'">选择目标Bucket</span>
+                    </div>
+                </div>
+
+                <!-- 步骤内容 -->
+                <div class="flex-1 overflow-y-auto px-5 pb-5">
+                    <!-- 步骤1：确认文件列表 -->
+                    <div v-if="copyStep === 1" class="space-y-2">
+                        <h4 class="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <i class="bi bi-files text-green-600"></i>
+                            待复制文件
+                        </h4>
+                        <div class="space-y-1.5 max-h-80 overflow-y-auto">
+                            <div v-for="file in selectedFilesList" :key="file.key"
+                                 class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-green-300 transition-all">
+                                <i :class="[getFileIcon(file), getFileColor(file)]" class="text-xl flex-shrink-0"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate" :title="file.name">{{ file.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 步骤2：选择Bucket -->
+                    <div v-if="copyStep === 2" class="space-y-3">
+                        <div>
+                            <h4 class="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                                <i class="bi bi-bucket text-green-600"></i>
+                                选择目标Bucket
+                            </h4>
+                            <div class="space-y-1.5 max-h-56 overflow-y-auto">
+                                <button
+                                    v-for="bucket in targetBuckets"
+                                    :key="bucket"
+                                    @click="selectedTargetBucket = bucket"
+                                    :class="selectedTargetBucket === bucket ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200 hover:border-green-200'"
+                                    class="w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-left group">
+                                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                                        <i class="bi bi-bucket-fill text-white"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900">{{ bucket }}</p>
+                                        <p v-if="bucket === currentBucket" class="text-xs text-gray-500">当前Bucket</p>
+                                    </div>
+                                    <i v-if="selectedTargetBucket === bucket" class="bi bi-check-circle-fill text-green-600"></i>
+                                    <i v-else class="bi bi-chevron-right text-xs text-gray-400 group-hover:text-green-600 transition-colors"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
+                            <input
+                                type="checkbox"
+                                id="keepPath"
+                                v-model="keepPathStructure"
+                                class="w-4 h-4 rounded cursor-pointer mt-0.5">
+                            <label for="keepPath" class="flex-1 cursor-pointer">
+                                <p class="font-medium text-gray-900 text-xs">保留目录结构</p>
+                                <p class="text-xs text-gray-600 mt-0.5">复制时保持原有的文件夹层级关系</p>
+                            </label>
+                        </div>
+
+                        <div class="flex items-start gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                            <i class="bi bi-info-circle text-blue-600 flex-shrink-0 mt-0.5"></i>
+                            <div class="text-xs text-blue-900">
+                                <p class="font-medium mb-0.5">复制配置</p>
+                                <p class="text-xs text-blue-700">
+                                    从 <span class="font-semibold">{{ currentBucket }}</span>
+                                    复制到 <span class="font-semibold">{{ selectedTargetBucket || '(未选择)' }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="flex items-center justify-between p-5 border-t border-gray-100 bg-gray-50">
+                    <button
+                        v-if="copyStep > 1"
+                        @click="copyStep--"
+                        class="px-4 py-2 text-gray-700 hover:bg-white rounded-lg transition-all border border-transparent hover:border-gray-200 flex items-center gap-1.5 text-sm">
+                        <i class="bi bi-chevron-left"></i>
+                        <span>上一步</span>
+                    </button>
+                    <div v-else></div>
+
+                    <div class="flex gap-2">
+                        <button @click="showBatchCopyDialog = false"
+                                class="px-4 py-2 text-gray-700 hover:bg-white rounded-lg transition-all border border-transparent hover:border-gray-200">
+                            取消
+                        </button>
+                        <button
+                            v-if="copyStep < 2"
+                            @click="copyStep++"
+                            class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20 flex items-center gap-1.5 font-medium text-sm">
+                            <span>下一步</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button
+                            v-else
+                            @click="confirmBatchCopy"
+                            :disabled="!selectedTargetBucket"
+                            class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20 flex items-center gap-1.5 font-medium text-sm">
+                            <i class="bi bi-check-lg"></i>
+                            <span>开始复制</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast 通知（右上角） -->
         <div class="fixed top-6 right-6 z-50 space-y-3 w-96">
             <div
@@ -1167,6 +1676,72 @@
                 </div>
             </div>
             <p class="text-xs text-gray-700 mt-2">剩余时间: 约 {{ uploadProgress.remainingTime }}</p>
+        </div>
+
+        <!-- 批量移动进度卡片（右下角） -->
+        <div v-if="moveProgress.show" class="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-xl shadow-2xl border border-purple-200 p-4 animate-slide-up">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                        <i class="bi bi-folder-symlink text-white text-sm"></i>
+                    </div>
+                    批量移动中...
+                </h4>
+            </div>
+            <div class="flex items-center gap-3 mb-3">
+                <i class="bi bi-file-earmark text-purple-600 text-2xl flex-shrink-0"></i>
+                <div class="flex-1">
+                    <p class="text-sm text-gray-900 truncate mb-1">{{ moveProgress.currentFile }}</p>
+                    <div class="flex items-center gap-2 text-xs text-gray-700">
+                        <span>{{ moveProgress.current }} / {{ moveProgress.total }}</span>
+                        <span class="text-purple-600 font-semibold">{{ Math.round((moveProgress.current / moveProgress.total) * 100) }}%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-2">
+                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                        class="bg-gradient-to-r from-purple-600 to-purple-700 h-full transition-all duration-300 rounded-full"
+                        :style="{ width: ((moveProgress.current / moveProgress.total) * 100) + '%' }"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-600">
+                <span>成功: {{ moveProgress.succeeded }}</span>
+                <span v-if="moveProgress.failed > 0" class="text-red-600">失败: {{ moveProgress.failed }}</span>
+            </div>
+        </div>
+
+        <!-- 批量复制进度卡片（右下角） -->
+        <div v-if="copyProgress.show" class="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-xl shadow-2xl border border-green-200 p-4 animate-slide-up">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                        <i class="bi bi-files text-white text-sm"></i>
+                    </div>
+                    跨Bucket复制中...
+                </h4>
+            </div>
+            <div class="flex items-center gap-3 mb-3">
+                <i class="bi bi-file-earmark text-green-600 text-2xl flex-shrink-0"></i>
+                <div class="flex-1">
+                    <p class="text-sm text-gray-900 truncate mb-1">{{ copyProgress.currentFile }}</p>
+                    <div class="flex items-center gap-2 text-xs text-gray-700">
+                        <span>{{ copyProgress.current }} / {{ copyProgress.total }}</span>
+                        <span class="text-green-600 font-semibold">{{ Math.round((copyProgress.current / copyProgress.total) * 100) }}%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-2">
+                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                        class="bg-gradient-to-r from-green-600 to-green-700 h-full transition-all duration-300 rounded-full"
+                        :style="{ width: ((copyProgress.current / copyProgress.total) * 100) + '%' }"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-600">
+                <span>成功: {{ copyProgress.succeeded }}</span>
+                <span v-if="copyProgress.failed > 0" class="text-red-600">失败: {{ copyProgress.failed }}</span>
+            </div>
         </div>
 
         <!-- 批量操作浮动工具栏 -->
@@ -1291,9 +1866,13 @@
     </div>
 
     <!-- Vue 3 -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
-    <!-- Axios -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/axios/1.6.7/axios.min.js"></script>
+    <!-- Vue 3 - jsDelivr (主CDN) with Unpkg fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"
+            onerror="this.onerror=null;this.src='https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js'"></script>
+
+    <!-- Axios - jsDelivr (主CDN) with Unpkg fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"
+            onerror="this.onerror=null;this.src='https://unpkg.com/axios@1.6.7/dist/axios.min.js'"></script>
 
     <script>
         const { createApp } = Vue;
@@ -1324,6 +1903,7 @@
                     highlightedCode: '',
                     showDeleteDialog: false,
                     fileToDelete: null,
+                    showBatchDeleteDialog: false,
                     showRenameDialog: false,
                     fileToRename: null,
                     newFileName: '',
@@ -1375,7 +1955,36 @@
                     // 批量操作模式
                     batchMode: false,
                     // 用于 Shift 多选
-                    lastClickedIndex: -1
+                    lastClickedIndex: -1,
+                    // 批量移动对话框
+                    showBatchMoveDialog: false,
+                    folderTree: [],
+                    selectedTargetFolder: '',
+                    loadingFolders: false,
+                    expandedFolders: new Set(),
+                    loadingSubFolders: new Set(), // 正在加载子文件夹的路径
+                    moveProgress: {
+                        show: false,
+                        current: 0,
+                        total: 0,
+                        currentFile: '',
+                        succeeded: 0,
+                        failed: 0
+                    },
+                    // 批量复制到其他Bucket对话框
+                    showBatchCopyDialog: false,
+                    copyStep: 1, // 1: 确认文件, 2: 选择Bucket
+                    selectedTargetBucket: '',
+                    targetBuckets: [],
+                    keepPathStructure: true,
+                    copyProgress: {
+                        show: false,
+                        current: 0,
+                        total: 0,
+                        currentFile: '',
+                        succeeded: 0,
+                        failed: 0
+                    }
                 }
             },
             computed: {
@@ -1448,6 +2057,9 @@
                 },
                 selectedFilesCount() {
                     return this.selectedFiles.size;
+                },
+                selectedFilesList() {
+                    return this.files.filter(f => this.selectedFiles.has(f.key));
                 }
             },
             watch: {
@@ -2143,14 +2755,44 @@
                     event.preventDefault();
                     this.contextMenu.show = true;
                     this.contextMenu.type = type;
-                    this.contextMenu.x = event.clientX;
-                    this.contextMenu.y = event.clientY;
 
                     if (type === 'breadcrumb') {
                         this.contextMenu.path = data;
                     } else if (type === 'file') {
                         this.contextMenu.file = data;
                     }
+
+                    // 在下一帧计算菜单位置，确保DOM已更新
+                    this.$nextTick(() => {
+                        const menuElement = document.querySelector('.context-menu');
+                        if (!menuElement) return;
+
+                        const menuWidth = menuElement.offsetWidth || 180;
+                        const menuHeight = menuElement.offsetHeight || 300;
+                        const windowWidth = window.innerWidth;
+                        const windowHeight = window.innerHeight;
+                        const mouseX = event.clientX;
+                        const mouseY = event.clientY;
+
+                        // 计算X位置（防止右侧溢出）
+                        let x = mouseX;
+                        if (mouseX + menuWidth > windowWidth) {
+                            x = windowWidth - menuWidth - 10; // 留10px边距
+                        }
+
+                        // 计算Y位置（防止底部溢出）
+                        let y = mouseY;
+                        if (mouseY + menuHeight > windowHeight) {
+                            y = windowHeight - menuHeight - 10; // 留10px边距
+                        }
+
+                        // 确保不超出顶部和左侧
+                        x = Math.max(10, x);
+                        y = Math.max(10, y);
+
+                        this.contextMenu.x = x;
+                        this.contextMenu.y = y;
+                    });
                 },
                 hideContextMenu() {
                     this.contextMenu.show = false;
@@ -2545,32 +3187,322 @@
                     this.showToast('success', `开始下载 ${selected.length} 个文件`, '批量下载');
                 },
                 batchDelete() {
-                    const selected = this.displayFiles.filter(f => this.selectedFiles.has(f.key));
-                    if (selected.length === 0) return;
+                    if (this.selectedFilesCount === 0) {
+                        this.showToast('error', '请先选择要删除的文件');
+                        return;
+                    }
+                    // 显示批量删除确认对话框
+                    this.showBatchDeleteDialog = true;
+                },
+                async confirmBatchDelete() {
+                    const selected = this.selectedFilesList;
 
-                    if (confirm(`确定要删除选中的 ${selected.length} 个文件吗？`)) {
-                        selected.forEach(async (file) => {
-                            try {
-                                await axios.delete('/api/storage/files', {
-                                    params: {
-                                        bucketName: this.currentBucket,
-                                        objectKey: file.key
-                                    }
-                                });
-                            } catch (error) {
-                                console.error('删除失败:', file.name, error);
-                            }
+                    // 关闭对话框
+                    this.showBatchDeleteDialog = false;
+
+                    // 执行删除
+                    let successCount = 0;
+                    let failCount = 0;
+
+                    for (const file of selected) {
+                        try {
+                            await axios.delete('/api/storage/files', {
+                                params: {
+                                    bucketName: this.currentBucket,
+                                    objectKey: file.key
+                                }
+                            });
+                            successCount++;
+                        } catch (error) {
+                            console.error('删除失败:', file.name, error);
+                            failCount++;
+                        }
+                    }
+
+                    if (failCount > 0) {
+                        this.showToast('warning', `成功 ${successCount} 个，失败 ${failCount} 个`, '批量删除');
+                    } else {
+                        this.showToast('success', `已成功删除 ${successCount} 个文件`, '批量删除');
+                    }
+
+                    this.clearSelection();
+                    setTimeout(() => this.loadFiles(), 500);
+                },
+                // 批量移动功能
+                async batchMove() {
+                    if (this.selectedFilesCount === 0) {
+                        this.showToast('error', '请先选择要移动的文件');
+                        return;
+                    }
+
+                    // 打开对话框
+                    this.showBatchMoveDialog = true;
+                    this.selectedTargetFolder = '';
+
+                    // 加载文件夹列表
+                    await this.loadFolderTree();
+                },
+                async loadFolderTree() {
+                    this.loadingFolders = true;
+                    this.folderTree = [];
+                    this.expandedFolders.clear();
+                    this.loadingSubFolders.clear();
+
+                    try {
+                        const response = await axios.post('/api/storage/files/list', {
+                            bucketName: this.currentBucket,
+                            prefix: '',
+                            delimiter: '/',
+                            pageSize: 1000
                         });
-                        this.showToast('success', `已删除 ${selected.length} 个文件`, '批量删除');
-                        this.clearSelection();
-                        setTimeout(() => this.loadFiles(), 1000);
+
+                        if (response.data.success) {
+                            const folders = response.data.data.folders || [];
+
+                            // 只加载第一层文件夹
+                            this.folderTree = folders.map(folder => ({
+                                key: folder.key,
+                                name: folder.name,
+                                level: 0,
+                                hasChildren: true, // 假设都有子文件夹，展开时再检查
+                                childrenLoaded: false
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('加载文件夹失败:', error);
+                        this.showToast('error', '加载文件夹列表失败');
+                    } finally {
+                        this.loadingFolders = false;
                     }
                 },
-                batchMove() {
-                    this.showToast('info', '移动功能开发中');
+                async toggleFolder(folder) {
+                    const isExpanded = this.expandedFolders.has(folder.key);
+
+                    if (isExpanded) {
+                        // 折叠：移除该文件夹的所有子文件夹
+                        this.expandedFolders.delete(folder.key);
+                        this.folderTree = this.folderTree.filter(f => !f.key.startsWith(folder.key) || f.key === folder.key);
+                    } else {
+                        // 展开：加载子文件夹
+                        if (!folder.childrenLoaded) {
+                            await this.loadSubFolders(folder);
+                        }
+                        this.expandedFolders.add(folder.key);
+                    }
                 },
-                batchCopyToBucket() {
-                    this.showToast('info', '复制功能开发中');
+                async loadSubFolders(parentFolder) {
+                    this.loadingSubFolders.add(parentFolder.key);
+
+                    try {
+                        const response = await axios.post('/api/storage/files/list', {
+                            bucketName: this.currentBucket,
+                            prefix: parentFolder.key,
+                            delimiter: '/',
+                            pageSize: 1000
+                        });
+
+                        if (response.data.success) {
+                            const subFolders = response.data.data.folders || [];
+
+                            if (subFolders.length === 0) {
+                                // 没有子文件夹，更新hasChildren
+                                const folderIndex = this.folderTree.findIndex(f => f.key === parentFolder.key);
+                                if (folderIndex !== -1) {
+                                    this.folderTree[folderIndex].hasChildren = false;
+                                }
+                            } else {
+                                // 将子文件夹插入到父文件夹后面
+                                const parentIndex = this.folderTree.findIndex(f => f.key === parentFolder.key);
+                                if (parentIndex !== -1) {
+                                    const newFolders = subFolders.map(folder => ({
+                                        key: folder.key,
+                                        name: folder.name,
+                                        level: parentFolder.level + 1,
+                                        hasChildren: true,
+                                        childrenLoaded: false
+                                    }));
+
+                                    // 在父文件夹后插入子文件夹
+                                    this.folderTree.splice(parentIndex + 1, 0, ...newFolders);
+
+                                    // 标记已加载
+                                    this.folderTree[parentIndex].childrenLoaded = true;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('加载子文件夹失败:', parentFolder.key, error);
+                        this.showToast('error', '加载子文件夹失败');
+                    } finally {
+                        this.loadingSubFolders.delete(parentFolder.key);
+                    }
+                },
+                async confirmBatchMove() {
+                    const targetPath = this.selectedTargetFolder === '' ? '' : this.selectedTargetFolder;
+                    const filesToMove = this.selectedFilesList;
+
+                    if (filesToMove.length === 0) {
+                        this.showToast('error', '没有选择文件');
+                        return;
+                    }
+
+                    // 关闭对话框，显示进度
+                    this.showBatchMoveDialog = false;
+                    this.moveProgress.show = true;
+                    this.moveProgress.current = 0;
+                    this.moveProgress.total = filesToMove.length;
+                    this.moveProgress.succeeded = 0;
+                    this.moveProgress.failed = 0;
+
+                    // 逐个移动文件
+                    for (const file of filesToMove) {
+                        this.moveProgress.currentFile = file.name;
+
+                        try {
+                            // 计算新的key
+                            const fileName = file.name;
+                            const newKey = targetPath ? `${targetPath}${fileName}` : fileName;
+
+                            // 调用重命名API（实际上是移动）
+                            const response = await axios.put('/api/storage/files/rename', null, {
+                                params: {
+                                    bucketName: this.currentBucket,
+                                    oldKey: file.key,
+                                    newKey: newKey
+                                }
+                            });
+
+                            if (response.data.success) {
+                                this.moveProgress.succeeded++;
+                            } else {
+                                this.moveProgress.failed++;
+                                console.error('移动失败:', file.name, response.data.message);
+                            }
+                        } catch (error) {
+                            this.moveProgress.failed++;
+                            console.error('移动失败:', file.name, error);
+                        }
+
+                        this.moveProgress.current++;
+                    }
+
+                    // 完成后显示结果
+                    setTimeout(() => {
+                        this.moveProgress.show = false;
+
+                        if (this.moveProgress.failed === 0) {
+                            this.showToast('success', `成功移动 ${this.moveProgress.succeeded} 个文件`, '移动完成');
+                        } else {
+                            this.showToast('error', `成功 ${this.moveProgress.succeeded} 个，失败 ${this.moveProgress.failed} 个`, '移动完成');
+                        }
+
+                        this.clearSelection();
+                        this.loadFiles();
+                    }, 1000);
+                },
+                // 批量复制到其他Bucket功能
+                async batchCopyToBucket() {
+                    if (this.selectedFilesCount === 0) {
+                        this.showToast('error', '请先选择要复制的文件');
+                        return;
+                    }
+
+                    // 打开对话框
+                    this.showBatchCopyDialog = true;
+                    this.copyStep = 1;
+                    this.selectedTargetBucket = '';
+                    this.keepPathStructure = true;
+
+                    // 直接加载当前backend的buckets
+                    try {
+                        const response = await axios.get('/api/storage/buckets');
+                        if (response.data.success) {
+                            this.targetBuckets = response.data.data;
+                        }
+                    } catch (error) {
+                        console.error('加载bucket列表失败:', error);
+                        this.showToast('error', '加载Bucket列表失败');
+                    }
+                },
+                async confirmBatchCopy() {
+                    const filesToCopy = this.selectedFilesList;
+
+                    if (filesToCopy.length === 0) {
+                        this.showToast('error', '没有选择文件');
+                        return;
+                    }
+
+                    if (!this.selectedTargetBucket) {
+                        this.showToast('error', '请选择目标Bucket');
+                        return;
+                    }
+
+                    // 关闭对话框，显示进度
+                    this.showBatchCopyDialog = false;
+                    this.copyProgress.show = true;
+                    this.copyProgress.current = 0;
+                    this.copyProgress.total = filesToCopy.length;
+                    this.copyProgress.succeeded = 0;
+                    this.copyProgress.failed = 0;
+
+                    // 逐个复制文件
+                    for (const file of filesToCopy) {
+                        if (file.isFolder) continue; // 跳过文件夹
+
+                        this.copyProgress.currentFile = file.name;
+
+                        try {
+                            // 计算目标key
+                            let targetKey;
+                            if (this.keepPathStructure) {
+                                // 保留路径结构
+                                targetKey = file.key;
+                            } else {
+                                // 只保留文件名
+                                targetKey = file.name;
+                            }
+
+                            // 调用复制API（先下载再上传）
+                            // 1. 下载文件
+                            const downloadUrl = `/api/storage/download?bucketName=${encodeURIComponent(this.currentBucket)}&objectKey=${encodeURIComponent(file.key)}`;
+                            const downloadResponse = await axios.get(downloadUrl, { responseType: 'blob' });
+
+                            // 2. 上传到目标bucket
+                            const formData = new FormData();
+                            formData.append('file', new File([downloadResponse.data], file.name));
+                            formData.append('bucketName', this.selectedTargetBucket);
+                            formData.append('objectKey', targetKey);
+
+                            const uploadResponse = await axios.post('/api/storage/upload', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' }
+                            });
+
+                            if (uploadResponse.data.success) {
+                                this.copyProgress.succeeded++;
+                            } else {
+                                this.copyProgress.failed++;
+                                console.error('复制失败:', file.name, uploadResponse.data.message);
+                            }
+                        } catch (error) {
+                            this.copyProgress.failed++;
+                            console.error('复制失败:', file.name, error);
+                        }
+
+                        this.copyProgress.current++;
+                    }
+
+                    // 完成后显示结果
+                    setTimeout(() => {
+                        this.copyProgress.show = false;
+
+                        if (this.copyProgress.failed === 0) {
+                            this.showToast('success', `成功复制 ${this.copyProgress.succeeded} 个文件到 ${this.selectedTargetBucket}`, '复制完成');
+                        } else {
+                            this.showToast('error', `成功 ${this.copyProgress.succeeded} 个，失败 ${this.copyProgress.failed} 个`, '复制完成');
+                        }
+
+                        this.clearSelection();
+                    }, 1000);
                 }
             }
         }).mount('#app');
