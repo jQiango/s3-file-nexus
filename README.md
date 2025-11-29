@@ -2,36 +2,38 @@
 
 <div align="center">
 
+English | [简体中文](README.zh-CN.md)
+
 [![GitHub](https://img.shields.io/badge/GitHub-s3--file--nexus-blue?logo=github)](https://github.com/jQiango/s3-file-nexus)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.8-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.4-42b883.svg)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**现代化 S3 对象存储管理系统**
+**Modern S3 Object Storage Management System**
 
-一个基于 Spring Boot 和 Vue.js 构建的 Web 文件管理器，支持所有 S3 兼容的对象存储服务
+A web-based file manager built with Spring Boot and Vue.js, supporting all S3-compatible object storage services
 
-[🚀 快速开始](#-快速开始) • [🔧 配置说明](#-配置说明) • [🛠️ 技术栈](#️-技术栈)
+[🚀 Quick Start](#-quick-start) • [🔧 Configuration](#-configuration) • [🛠️ Tech Stack](#️-tech-stack)
 
 </div>
 
 ---
 
-## 📖 项目简介
+## 📖 About
 
-S3 File Nexus 是一个轻量级的 Web 文件管理系统，提供了类似操作系统文件管理器的用户体验。通过标准的 S3 协议与对象存储服务通信，无需额外的存储代理或中间层，可以直接管理您的云端文件。
+S3 File Nexus is a lightweight web-based file management system that provides an OS-like file manager experience. It communicates with object storage services through standard S3 protocol without requiring any additional storage proxies or middleware layers, allowing you to directly manage your cloud files.
 
 
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
+### Requirements
 
 - **Java** 17+
 - **Maven** 3.6+
-- **S3 兼容存储服务** (AWS S3, MinIO, 阿里云 OSS, 腾讯云 COS 等)
+- **S3-compatible Storage Service** (AWS S3, MinIO, Alibaba Cloud OSS, Tencent Cloud COS, etc.)
 
-### 启动应用
+### Launch Application
 
 ```bash
 # Windows
@@ -40,58 +42,59 @@ start.bat
 # Linux/Mac
 ./start.sh
 
-# 或手动启动
+# Or manually start
 mvn spring-boot:run -Dspring-boot.run.profiles=storage
 ```
 
-启动后访问: **http://localhost:8081**
+After startup, visit: **http://localhost:8081**
 
-### 首次使用
+### First-time Setup
 
-1. 访问配置页面 `http://localhost:8081/config.html`
-2. 填写 S3 存储配置信息：
-   - 存储后端名称（自定义）
-   - Endpoint（S3 服务地址）
+1. Visit the configuration page `http://localhost:8081/config.html`
+2. Fill in S3 storage configuration:
+   - Storage backend name (custom)
+   - Endpoint (S3 service address)
    - Access Key
    - Secret Key
    - Region
-   - Bucket 名称
-3. 点击"测试连接"验证配置
-4. 保存配置并返回首页
+   - Bucket name
+3. Click "Test Connection" to verify configuration
+4. Save configuration and return to homepage
 
 
-### 支持的存储服务
+### Supported Storage Services
 
-本系统基于标准 S3 协议开发，理论上支持所有兼容 S3 协议的对象存储服务。
+This system is developed based on standard S3 protocol and theoretically supports all S3-compatible object storage services.
 
-**已测试：**
+**Tested:**
 
-- ✅ **自有 S3 协议的 OSS** - 已验证可用
+- ✅ **Self-hosted S3 Protocol OSS** - Verified
 
-**理论支持（S3 兼容）：**
+**Theoretically Supported (S3-compatible):**
 
 - 📦 **AWS S3** - Amazon Simple Storage Service
-- 📦 **MinIO** - 开源对象存储服务
-- 📦 **阿里云 OSS** - Alibaba Cloud Object Storage Service（S3 兼容模式）
-- 📦 **腾讯云 COS** - Tencent Cloud Object Storage（S3 兼容模式）
-- 📦 **华为云 OBS** - Huawei Cloud Object Storage Service（S3 兼容模式）
-- 📦 **七牛云 Kodo** - Qiniu Cloud Object Storage（S3 兼容模式）
+- 📦 **MinIO** - Open-source object storage service
+- 📦 **Alibaba Cloud OSS** - Alibaba Cloud Object Storage Service (S3-compatible mode)
+- 📦 **Tencent Cloud COS** - Tencent Cloud Object Storage (S3-compatible mode)
+- 📦 **Huawei Cloud OBS** - Huawei Cloud Object Storage Service (S3-compatible mode)
+- 📦 **Qiniu Cloud Kodo** - Qiniu Cloud Object Storage (S3-compatible mode)
 
-> 💡 **提示**：只要您的对象存储服务支持标准 S3 API，就可以使用本系统进行管理。如遇到兼容性问题，欢迎提 Issue 反馈。
+> 💡 **Tip**: As long as your object storage service supports standard S3 API, you can use this system to manage it. If you encounter compatibility issues, please submit an Issue.
 >
 
 
-## 📄 开源协议
 
-本项目采用 [MIT License](LICENSE) 开源协议
+## 📄 License
 
-## 🤝 贡献
+This project is licensed under the [MIT License](LICENSE)
 
-欢迎提交 Issue 和 Pull Request！
+## 🤝 Contributing
 
-## 💖 支持
+Issues and Pull Requests are welcome!
 
-如果这个项目对你有帮助，请给个 ⭐ Star 支持一下！
+## 💖 Support
+
+If this project helps you, please give it a ⭐ Star!
 
 ---
 
