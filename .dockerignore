@@ -1,48 +1,70 @@
-# Docker ignore file for S3 File Nexus
-
 # Git
 .git
 .gitignore
-
-# Maven
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
+.gitattributes
 
 # IDE
-.idea/
+.idea
+.vscode
+.eclipse
+.settings
 *.iml
-.vscode/
+*.iws
+*.ipr
+
+# Maven
+# target  # 注释掉，构建时需要 JAR 文件
+.mvn
+
+# Logs
+logs
+*.log
+
+# Temp files
+*.tmp
+*.temp
 *.swp
 *.swo
-.DS_Store
+*~
+*.bak
+
+# Runtime directories
+cache
+storage-cache
+tmp
+
+# Node.js
+node_modules
+package-lock.json
 
 # Documentation
 *.md
 !README.md
-docs/
 
-# Build artifacts
-*.jar
-*.war
-*.ear
-
-# Logs
-logs/
-*.log
-
-# Temp files
-tmp/
-temp/
-*.tmp
+# Deployment
+deploy
+deploy-package
+docker-compose*.yml
+.env
+.env.*
 
 # OS
+.DS_Store
 Thumbs.db
-.directory
 
-# Backup
-*.bak
-*.backup
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Claude AI
+.claude
+
+# Backup files
+*.simple
+nul
+
+# Scripts (if not needed in container)
+start.bat
+start.sh
+docker-start.bat
+docker-start.sh

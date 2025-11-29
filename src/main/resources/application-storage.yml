@@ -42,6 +42,10 @@ storage:
   preview:
     enabled: true
     url-expiration: 3600  # 1小时
+    enable-image-compression: true
+    image-max-width: 1920
+    image-max-height: 1080
+    image-quality: 0.85
 
   security:
     enable-file-type-check: true

@@ -92,4 +92,25 @@ public interface StorageService {
      * 计算文件夹大小（递归计算所有子文件）
      */
     long calculateFolderSize(String backendName, String bucketName, String folderPath);
+
+    /**
+     * 复制文件到另一个 bucket
+     * @param backendName 后端名称
+     * @param sourceBucket 源 bucket
+     * @param sourceKey 源文件路径
+     * @param targetBucket 目标 bucket
+     * @param targetKey 目标文件路径
+     */
+    void copyFile(String backendName, String sourceBucket, String sourceKey, String targetBucket, String targetKey);
+
+    /**
+     * 复制文件夹到另一个 bucket（递归复制所有子文件）
+     * @param backendName 后端名称
+     * @param sourceBucket 源 bucket
+     * @param sourceFolderPath 源文件夹路径（以 / 结尾）
+     * @param targetBucket 目标 bucket
+     * @param targetFolderPath 目标文件夹路径（以 / 结尾）
+     * @return 复制的文件数量
+     */
+    int copyFolder(String backendName, String sourceBucket, String sourceFolderPath, String targetBucket, String targetFolderPath);
 }

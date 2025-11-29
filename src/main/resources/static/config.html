@@ -40,9 +40,23 @@
             display: none !important;
         }
 
+        @keyframes slide-in-right {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .animate-slide-in-right {
+            animation: slide-in-right 0.3s ease-out;
+        }
+
         @keyframes slide-up {
             from {
-                transform: translateY(100%);
+                transform: translateY(20px);
                 opacity: 0;
             }
             to {
@@ -63,177 +77,242 @@
             }
         }
         .animate-fade-in {
-            animation: fade-in 0.3s ease-out;
+            animation: fade-in 0.4s ease-out;
         }
 
-        .config-card {
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .history-card {
             transition: all 0.2s ease;
         }
-        .config-card:hover {
+        .history-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 按钮动效 */
+        button {
+            transition: all 0.2s ease;
+        }
+        button:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+        button:not(:disabled):active {
+            transform: translateY(0);
+        }
+
+        /* Toast动效增强 */
+        .toast-enter {
+            animation: slide-in-right 0.3s ease-out;
         }
     </style>
 </head>
-<body class="h-full bg-gradient-to-br from-blue-50 via-white to-blue-50">
-    <div id="app" v-cloak class="min-h-full flex items-center justify-center p-6">
-        <!-- 主容器 -->
-        <div class="w-full max-w-2xl">
-            <!-- Logo和标题 -->
-            <div class="text-center mb-8 animate-fade-in">
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg mb-4">
-                    <i class="bi bi-cloud-fill text-white text-4xl"></i>
+<body class="h-full overflow-auto bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div id="app" v-cloak class="min-h-screen py-12 px-4 relative">
+        <!-- 加载提示（右下角） -->
+        <div v-if="loading" class="fixed bottom-6 right-6 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 animate-slide-up max-w-xs">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <i class="bi bi-arrow-clockwise text-white text-lg animate-spin"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">S3 文件管理器</h1>
-                <p class="text-gray-600">配置您的对象存储连接</p>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ loadingMessage }}</p>
+                    <p class="text-xs text-gray-600 mt-0.5">请稍候...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主容器 -->
+        <div class="max-w-xl mx-auto">
+            <!-- Logo和标题 -->
+            <div class="text-center mb-6 animate-fade-in">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mb-3">
+                    <i class="bi bi-cloud-fill text-white text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-1">S3 文件管理器</h1>
+                <p class="text-sm text-gray-600">配置您的对象存储连接</p>
+            </div>
+
+            <!-- Toast 通知 -->
+            <div v-if="alert.show"
+                 class="mb-6 p-4 rounded-xl border-2 flex items-start gap-3 animate-slide-in-right"
+                 :class="{
+                     'bg-green-50 border-green-200': alert.type === 'success',
+                     'bg-red-50 border-red-200': alert.type === 'error'
+                 }">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                     :class="{
+                         'bg-green-100': alert.type === 'success',
+                         'bg-red-100': alert.type === 'error'
+                     }">
+                    <i class="text-xl"
+                       :class="{
+                           'bi bi-check-circle text-green-600': alert.type === 'success',
+                           'bi bi-x-circle text-red-600': alert.type === 'error'
+                       }"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-sm mb-1"
+                        :class="{
+                            'text-green-900': alert.type === 'success',
+                            'text-red-900': alert.type === 'error'
+                        }">
+                        {{ alert.type === 'success' ? '操作成功' : '操作失败' }}
+                    </h4>
+                    <p class="text-xs"
+                       :class="{
+                           'text-green-800': alert.type === 'success',
+                           'text-red-800': alert.type === 'error'
+                       }">{{ alert.message }}</p>
+                </div>
+                <button @click="alert.show = false" class="text-gray-500 hover:text-gray-700">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
 
             <!-- 配置表单卡片 -->
-            <div class="bg-white rounded-2xl shadow-xl p-8 mb-6 animate-slide-up">
-                <!-- 提示信息 -->
-                <div v-if="alert.show"
-                     :class="alert.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'"
-                     class="mb-6 p-4 rounded-lg border flex items-center gap-3">
-                    <i :class="alert.type === 'success' ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-circle-fill text-red-600'"
-                       class="text-xl"></i>
-                    <span class="flex-1">{{ alert.message }}</span>
-                    <button @click="alert.show = false" class="text-gray-500 hover:text-gray-700">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-5 animate-slide-up">
                 <form @submit.prevent="saveConfig">
                     <!-- Endpoint -->
-                    <div class="mb-5">
-                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                            <i class="bi bi-link-45deg text-blue-600"></i>
-                            服务端点 (Endpoint)
+                    <div class="mb-4">
+                        <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-2">
+                            <i class="bi bi-link-45deg text-blue-600 text-sm"></i>
+                            服务端点 (Endpoint) <span class="text-red-500">*</span>
                         </label>
                         <input
                             v-model="config.endpoint"
                             type="text"
-                            placeholder="https://s3.amazonaws.com 或自定义地址"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                            placeholder="https://s3.amazonaws.com"
+                            class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                             required>
+                        <p class="text-xs text-gray-500 mt-1.5">示例: http://minio:9000</p>
                     </div>
 
                     <!-- Access Key -->
-                    <div class="mb-5">
-                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                            <i class="bi bi-key-fill text-blue-600"></i>
-                            Access Key ID
+                    <div class="mb-4">
+                        <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-2">
+                            <i class="bi bi-key-fill text-blue-600 text-sm"></i>
+                            Access Key ID <span class="text-red-500">*</span>
                         </label>
                         <input
                             v-model="config.accessKey"
                             type="text"
                             placeholder="输入您的 Access Key ID"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-mono"
+                            class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono transition-all"
                             required>
                     </div>
 
                     <!-- Secret Key -->
-                    <div class="mb-5">
-                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                            <i class="bi bi-shield-lock-fill text-blue-600"></i>
-                            Secret Access Key
+                    <div class="mb-4">
+                        <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-2">
+                            <i class="bi bi-shield-lock-fill text-blue-600 text-sm"></i>
+                            Secret Access Key <span class="text-red-500">*</span>
                         </label>
                         <div class="relative">
                             <input
                                 v-model="config.secretKey"
                                 :type="showSecret ? 'text' : 'password'"
                                 placeholder="输入您的 Secret Access Key"
-                                class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-mono"
+                                class="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono transition-all"
                                 required>
                             <button
                                 type="button"
                                 @click="showSecret = !showSecret"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
-                                <i :class="showSecret ? 'bi-eye-slash' : 'bi-eye'" class="text-lg"></i>
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors">
+                                <i :class="showSecret ? 'bi-eye-slash' : 'bi-eye'"></i>
                             </button>
                         </div>
                     </div>
 
                     <!-- Region 和 Bucket 并排 -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-2 gap-3 mb-5">
                         <!-- Region -->
                         <div>
-                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <i class="bi bi-globe2 text-blue-600"></i>
-                                区域 (Region)
+                            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-2">
+                                <i class="bi bi-globe2 text-blue-600 text-sm"></i>
+                                区域
                             </label>
                             <input
                                 v-model="config.region"
                                 type="text"
                                 placeholder="ap-beijing"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                                class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                         </div>
 
                         <!-- Default Bucket -->
                         <div>
-                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <i class="bi bi-database text-blue-600"></i>
-                                默认桶 <span class="text-xs text-gray-500">(可选)</span>
+                            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-2">
+                                <i class="bi bi-database text-blue-600 text-sm"></i>
+                                存储桶
                             </label>
                             <input
                                 v-model="config.bucket"
                                 type="text"
                                 placeholder="my-bucket"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                                class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                         </div>
                     </div>
 
                     <!-- 按钮组 -->
-                    <div class="flex gap-3">
+                    <div class="flex gap-2">
                         <button
                             type="button"
                             @click="testConnection"
                             :disabled="testing"
-                            class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i :class="testing ? 'bi-arrow-clockwise animate-spin' : 'bi-wifi'" class="text-lg"></i>
+                            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i :class="testing ? 'bi-arrow-clockwise animate-spin' : 'bi-wifi'" class="text-sm"></i>
                             <span>{{ testing ? '测试中...' : '测试连接' }}</span>
                         </button>
                         <button
                             type="submit"
                             :disabled="saving"
-                            class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i :class="saving ? 'bi-arrow-clockwise animate-spin' : 'bi-check-circle'" class="text-lg"></i>
+                            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i :class="saving ? 'bi-arrow-clockwise animate-spin' : 'bi-check-circle'" class="text-sm"></i>
                             <span>{{ saving ? '保存中...' : '保存并进入' }}</span>
                         </button>
                     </div>
                 </form>
             </div>
 
-            <!-- 已保存的配置 -->
-            <div v-if="savedConfigs.length > 0" class="bg-white rounded-2xl shadow-xl p-6 animate-slide-up">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <i class="bi bi-clock-history text-blue-600"></i>
+            <!-- 历史配置 -->
+            <div v-if="savedConfigs.length > 0" class="bg-white rounded-xl shadow-lg border border-gray-200 p-5 mb-5 animate-slide-up">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                        <i class="bi bi-clock-history text-blue-600 text-sm"></i>
                         最近使用的配置
                     </h3>
-                    <span class="text-sm text-gray-500">{{ savedConfigs.length }} 个</span>
+                    <span class="text-xs text-gray-500">{{ savedConfigs.length }} 个</span>
                 </div>
 
-                <div class="space-y-2">
+                <div class="grid gap-2">
                     <div
                         v-for="(item, index) in savedConfigs"
                         :key="index"
-                        class="config-card flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-blue-400 cursor-pointer group">
-                        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                            <i class="bi bi-cloud-fill text-blue-600 text-xl"></i>
+                        class="history-card flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer group bg-gray-50 hover:bg-white">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                            <i class="bi bi-server text-blue-600"></i>
                         </div>
                         <div class="flex-1 min-w-0" @click="useConfig(index)">
-                            <div class="font-medium text-gray-900 truncate">{{ item.name }}</div>
-                            <div class="text-sm text-gray-500 truncate">{{ item.endpoint }}</div>
+                            <div class="font-medium text-sm text-gray-900 truncate">{{ item.name }}</div>
+                            <div class="text-xs text-gray-500 truncate">{{ item.endpoint }}</div>
                         </div>
-                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                                 @click.stop="useConfig(index)"
-                                class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors">
-                                <i class="bi bi-box-arrow-in-right"></i> 使用
+                                class="px-2.5 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 hover:shadow-md flex items-center gap-1">
+                                <i class="bi bi-box-arrow-in-right"></i>
+                                使用
                             </button>
                             <button
                                 @click.stop="deleteConfig(index)"
-                                class="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors">
+                                class="px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 hover:shadow-md">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -241,10 +320,10 @@
                 </div>
             </div>
 
-            <!-- 底部提示 -->
-            <div class="mt-6 text-center text-sm text-gray-600">
-                <i class="bi bi-info-circle"></i>
-                配置将保存在本地浏览器中，不会上传到服务器
+            <!-- 安全提示 -->
+            <div class="flex items-start gap-2 justify-center text-sm text-gray-500 animate-fade-in">
+                <i class="bi bi-shield-check mt-0.5"></i>
+                <p>配置信息仅保存在本地浏览器中，不会上传到服务器。请妥善保管您的密钥信息。</p>
             </div>
         </div>
     </div>
@@ -271,6 +350,8 @@
                     showSecret: false,
                     testing: false,
                     saving: false,
+                    loading: false,
+                    loadingMessage: '正在加载配置',
                     alert: {
                         show: false,
                         type: 'success',
@@ -299,7 +380,7 @@
                 async testConnection() {
                     // 验证必填字段
                     if (!this.config.endpoint || !this.config.accessKey || !this.config.secretKey) {
-                        this.showAlert('请填写完整的连接信息', 'error');
+                        this.showAlert('请填写完整的连接信息（Endpoint、Access Key、Secret Key）', 'error');
                         return;
                     }
 
@@ -316,7 +397,7 @@
                         const result = await response.json();
 
                         if (result.success) {
-                            this.showAlert('连接测试成功！', 'success');
+                            this.showAlert('连接测试成功！可以正常访问存储服务。', 'success');
                         } else {
                             this.showAlert('连接测试失败: ' + (result.message || '未知错误'), 'error');
                         }
@@ -335,7 +416,7 @@
 
                     // 验证必填字段
                     if (!this.config.endpoint || !this.config.accessKey || !this.config.secretKey) {
-                        this.showAlert('请填写完整的配置信息', 'error');
+                        this.showAlert('请填写完整的配置信息（Endpoint、Access Key、Secret Key）', 'error');
                         return;
                     }
 
@@ -360,15 +441,22 @@
                                 configs[existingIndex] = { ...this.config };
                             } else {
                                 configs.push({ ...this.config });
+                                // 只保留最近10个配置
+                                if (configs.length > 10) {
+                                    configs.shift();
+                                }
                             }
 
                             localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
                             sessionStorage.setItem('current_s3_config', JSON.stringify(this.config));
 
-                            this.showAlert('配置保存成功，正在跳转...', 'success');
+                            // 显示加载遮罩
+                            this.loading = true;
+                            this.loadingMessage = '配置保存成功，正在跳转';
+
                             setTimeout(() => {
                                 window.location.href = 'index.html';
-                            }, 800);
+                            }, 1000);
                         } else {
                             this.showAlert('配置保存失败: ' + (result.message || '未知错误'), 'error');
                         }
@@ -381,6 +469,10 @@
                 async useConfig(index) {
                     const config = this.savedConfigs[index];
                     if (!config) return;
+
+                    // 显示加载遮罩
+                    this.loading = true;
+                    this.loadingMessage = '正在加载配置';
 
                     try {
                         const response = await fetch('/api/storage/config/update', {
@@ -395,22 +487,30 @@
 
                         if (result.success) {
                             sessionStorage.setItem('current_s3_config', JSON.stringify(config));
-                            window.location.href = 'index.html';
+                            this.loadingMessage = '配置加载成功，正在跳转';
+                            setTimeout(() => {
+                                window.location.href = 'index.html';
+                            }, 800);
                         } else {
+                            this.loading = false;
                             this.showAlert('加载配置失败: ' + (result.message || '未知错误'), 'error');
                         }
                     } catch (error) {
+                        this.loading = false;
                         this.showAlert('加载配置失败: ' + error.message, 'error');
                     }
                 },
                 deleteConfig(index) {
-                    if (confirm('确定要删除这个配置吗？')) {
-                        const configs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                        configs.splice(index, 1);
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
-                        this.loadSavedConfigs();
-                        this.showAlert('配置已删除', 'success');
+                    const config = this.savedConfigs[index];
+                    if (!confirm(`确定要删除配置"${config.name}"吗？`)) {
+                        return;
                     }
+
+                    const configs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                    configs.splice(index, 1);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
+                    this.loadSavedConfigs();
+                    this.showAlert('配置已删除', 'success');
                 }
             }
         }).mount('#app');

@@ -37,12 +37,24 @@ logs/
 *.swp
 *.swo
 *~
+*.bak
 
-# Application
+# Application runtime
 /tmp/
 /storage-cache/
-/CLAUDE.md
-/.claude/
-*.md
-application-storage.yml
+/cache/
+/deploy-package/
+
+# Node.js (如果有前端构建)
 /node_modules/
+package-lock.json
+
+# Claude AI
+/.claude/
+
+# 本地配置文件 (不要提交到仓库)
+application-storage.yml
+
+# 备份和临时文件
+*.simple
+nul

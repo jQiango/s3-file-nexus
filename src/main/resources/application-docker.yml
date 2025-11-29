@@ -13,6 +13,9 @@ spring:
 
 # 存储配置
 storage:
+  # 默认使用动态配置
+  default-backend: dynamic
+
   upload:
     max-file-size: 104857600
     temp-dir: /tmp/storage
@@ -20,6 +23,10 @@ storage:
   preview:
     enabled: true
     url-expiration: 3600
+    enable-image-compression: true
+    image-max-width: 1920
+    image-max-height: 1080
+    image-quality: 0.85
 
   cache:
     enabled: true
@@ -79,17 +86,8 @@ storage:
       - vbs
       - sh
 
-  # MinIO配置
-  backends:
-    minio:
-      name: MinIO
-      type: S3
-      endpoint: ${STORAGE_BACKENDS_MINIO_ENDPOINT:http://minio:9000}
-      access-key-id: ${STORAGE_BACKENDS_MINIO_ACCESS_KEY_ID:minioadmin}
-      access-key-secret: ${STORAGE_BACKENDS_MINIO_ACCESS_KEY_SECRET:minioadmin}
-      region: us-east-1
-      default-bucket: demo-bucket
-      enabled: true
+  # 后端配置（通过前端页面动态配置）
+  backends: {}
 
 # 日志配置
 logging:

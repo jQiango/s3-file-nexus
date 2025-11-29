@@ -468,4 +468,83 @@ public class StorageController {
             return Result.error("连接测试失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 复制文件到另一个 bucket
+     */
+    @PostMapping("/files/copy")
+    public Result<Void> copyFile(@RequestBody Map<String, String> request) {
+        try {
+            String backendKey = storageService.getDefaultBackendKey();
+            String sourceBucket = request.get("sourceBucket");
+            String sourceKey = request.get("sourceKey");
+            String targetBucket = request.get("targetBucket");
+            String targetKey = request.get("targetKey");
+
+            // 验证参数
+            if (sourceBucket == null || sourceBucket.isEmpty()) {
+                return Result.error("源 bucket 不能为空");
+            }
+            if (sourceKey == null || sourceKey.isEmpty()) {
+                return Result.error("源文件路径不能为空");
+            }
+            if (targetBucket == null || targetBucket.isEmpty()) {
+                return Result.error("目标 bucket 不能为空");
+            }
+            if (targetKey == null || targetKey.isEmpty()) {
+                return Result.error("目标文件路径不能为空");
+            }
+
+            storageService.copyFile(backendKey, sourceBucket, sourceKey, targetBucket, targetKey);
+            return Result.success();
+
+        } catch (Exception e) {
+            log.error("复制文件失败", e);
+            return Result.error("复制文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 复制文件夹到另一个 bucket
+     */
+    @PostMapping("/folder/copy")
+    public Result<Map<String, Object>> copyFolder(@RequestBody Map<String, String> request) {
+        try {
+            String backendKey = storageService.getDefaultBackendKey();
+            String sourceBucket = request.get("sourceBucket");
+            String sourceFolderPath = request.get("sourceFolderPath");
+            String targetBucket = request.get("targetBucket");
+            String targetFolderPath = request.get("targetFolderPath");
+
+            // 验证参数
+            if (sourceBucket == null || sourceBucket.isEmpty()) {
+                return Result.error("源 bucket 不能为空");
+            }
+            if (sourceFolderPath == null || sourceFolderPath.isEmpty()) {
+                return Result.error("源文件夹路径不能为空");
+            }
+            if (targetBucket == null || targetBucket.isEmpty()) {
+                return Result.error("目标 bucket 不能为空");
+            }
+            if (targetFolderPath == null || targetFolderPath.isEmpty()) {
+                return Result.error("目标文件夹路径不能为空");
+            }
+
+            int copiedCount = storageService.copyFolder(backendKey, sourceBucket, sourceFolderPath,
+                                                       targetBucket, targetFolderPath);
+
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("copiedCount", copiedCount);
+            result.put("sourceBucket", sourceBucket);
+            result.put("sourceFolderPath", sourceFolderPath);
+            result.put("targetBucket", targetBucket);
+            result.put("targetFolderPath", targetFolderPath);
+
+            return Result.success(result);
+
+        } catch (Exception e) {
+            log.error("复制文件夹失败", e);
+            return Result.error("复制文件夹失败: " + e.getMessage());
+        }
+    }
 }

@@ -113,6 +113,26 @@ public class StorageConfigProperties {
          * 预览URL过期时间（秒）
          */
         private int urlExpiration = 3600; // 1小时
+
+        /**
+         * 图片预览是否启用压缩
+         */
+        private boolean enableImageCompression = true;
+
+        /**
+         * 图片压缩最大宽度（像素）
+         */
+        private int imageMaxWidth = 1920;
+
+        /**
+         * 图片压缩最大高度（像素）
+         */
+        private int imageMaxHeight = 1080;
+
+        /**
+         * 图片压缩质量（0.0-1.0）
+         */
+        private float imageQuality = 0.85f;
     }
     
     @Data

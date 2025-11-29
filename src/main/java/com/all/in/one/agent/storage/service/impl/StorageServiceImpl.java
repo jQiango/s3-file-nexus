@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -509,10 +510,65 @@ public class StorageServiceImpl implements StorageService {
                     .key(objectKey)
                     .build();
 
-            s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(response.getOutputStream()));
+            // 检查是否需要压缩图片
+            if (configProperties.getPreview().isEnableImageCompression() && isImage(contentType)) {
+                compressAndOutputImage(s3Client, getObjectRequest, response);
+            } else {
+                s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(response.getOutputStream()));
+            }
         } catch (Exception e) {
             log.error("文件预览失败 - backend: {}, bucket: {}, key: {}", backendName, bucketName, objectKey, e);
             throw new RuntimeException("文件预览失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 判断是否为图片类型
+     */
+    private boolean isImage(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String lowerType = contentType.toLowerCase();
+        return lowerType.startsWith("image/") &&
+               !lowerType.equals("image/svg+xml") && // SVG不压缩
+               !lowerType.equals("image/gif");       // GIF不压缩（保留动画）
+    }
+
+    /**
+     * 压缩图片并输出到响应流
+     */
+    private void compressAndOutputImage(S3Client s3Client, GetObjectRequest getObjectRequest, HttpServletResponse response) {
+        try {
+            // 从S3下载图片到内存
+            byte[] imageBytes = s3Client.getObject(getObjectRequest, ResponseTransformer.toBytes()).asByteArray();
+
+            // 使用Thumbnailator压缩图片
+            java.io.ByteArrayInputStream inputStream = new java.io.ByteArrayInputStream(imageBytes);
+            java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+
+            net.coobird.thumbnailator.Thumbnails.of(inputStream)
+                    .size(configProperties.getPreview().getImageMaxWidth(),
+                          configProperties.getPreview().getImageMaxHeight())
+                    .outputQuality(configProperties.getPreview().getImageQuality())
+                    .toOutputStream(outputStream);
+
+            // 输出压缩后的图片
+            byte[] compressedBytes = outputStream.toByteArray();
+            response.getOutputStream().write(compressedBytes);
+
+            log.debug("图片压缩成功 - 原始大小: {} bytes, 压缩后: {} bytes",
+                     imageBytes.length, compressedBytes.length);
+
+        } catch (Exception e) {
+            log.error("图片压缩失败，返回原图", e);
+            // 压缩失败时，返回原图
+            try {
+                s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(response.getOutputStream()));
+            } catch (IOException ex) {
+                log.error("返回原图失败", ex);
+                throw new RuntimeException(ex);
+            }
         }
     }
 
@@ -520,8 +576,7 @@ public class StorageServiceImpl implements StorageService {
     public String getPresignedUrl(String backendName, String bucketName, String objectKey, int expirationSeconds) {
         StorageConfigProperties.Backend backend = getBackend(backendName);
 
-        try {
-            S3Presigner presigner = s3ClientUtil.createS3Presigner(backend);
+        try(  S3Presigner presigner = s3ClientUtil.createS3Presigner(backend)) {
             String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
@@ -808,6 +863,122 @@ public class StorageServiceImpl implements StorageService {
         } catch (Exception e) {
             log.error("计算文件夹大小失败: bucket={}, folderPath={}", actualBucket, folderPath, e);
             throw new RuntimeException("计算文件夹大小失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void copyFile(String backendName, String sourceBucket, String sourceKey, String targetBucket, String targetKey) {
+        log.info("开始复制文件: backend={}, source={}:{}, target={}:{}",
+                backendName, sourceBucket, sourceKey, targetBucket, targetKey);
+
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+        if (backend == null || !backend.getEnabled()) {
+            throw new RuntimeException("存储后端不可用: " + backendName);
+        }
+
+        try (S3Client s3Client = s3ClientUtil.createS3Client(backend)) {
+            // 使用 S3 CopyObject API
+            CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                    .sourceBucket(sourceBucket)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(targetBucket)
+                    .destinationKey(targetKey)
+                    .build();
+
+            s3Client.copyObject(copyRequest);
+
+            log.info("文件复制成功: source={}:{}, target={}:{}",
+                    sourceBucket, sourceKey, targetBucket, targetKey);
+
+        } catch (Exception e) {
+            log.error("文件复制失败: source={}:{}, target={}:{}",
+                    sourceBucket, sourceKey, targetBucket, targetKey, e);
+            throw new RuntimeException("文件复制失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public int copyFolder(String backendName, String sourceBucket, String sourceFolderPath,
+                         String targetBucket, String targetFolderPath) {
+        log.info("开始复制文件夹: backend={}, source={}:{}, target={}:{}",
+                backendName, sourceBucket, sourceFolderPath, targetBucket, targetFolderPath);
+
+        // 确保路径以 / 结尾
+        if (!sourceFolderPath.endsWith("/")) {
+            sourceFolderPath += "/";
+        }
+        if (!targetFolderPath.endsWith("/")) {
+            targetFolderPath += "/";
+        }
+
+        StorageConfigProperties.Backend backend = getBackend(backendName);
+        if (backend == null || !backend.getEnabled()) {
+            throw new RuntimeException("存储后端不可用: " + backendName);
+        }
+
+        int copiedCount = 0;
+
+        try (S3Client s3Client = s3ClientUtil.createS3Client(backend)) {
+            ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
+                    .bucket(sourceBucket)
+                    .prefix(sourceFolderPath)
+                    .build();
+
+            ListObjectsV2Response listResponse;
+
+            do {
+                listResponse = s3Client.listObjectsV2(listRequest);
+
+                for (S3Object s3Object : listResponse.contents()) {
+                    String sourceKey = s3Object.key();
+
+                    // 跳过文件夹标记对象
+                    if (sourceKey.endsWith("/")) {
+                        continue;
+                    }
+
+                    // 计算目标路径
+                    String relativePath = sourceKey.substring(sourceFolderPath.length());
+                    String targetKey = targetFolderPath + relativePath;
+
+                    // 复制单个文件
+                    try {
+                        CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                                .sourceBucket(sourceBucket)
+                                .sourceKey(sourceKey)
+                                .destinationBucket(targetBucket)
+                                .destinationKey(targetKey)
+                                .build();
+
+                        s3Client.copyObject(copyRequest);
+                        copiedCount++;
+
+                        log.debug("文件复制成功: {} -> {}", sourceKey, targetKey);
+
+                    } catch (Exception e) {
+                        log.error("文件复制失败: {} -> {}, 错误: {}", sourceKey, targetKey, e.getMessage());
+                        // 继续复制其他文件
+                    }
+                }
+
+                // 继续下一页
+                if (listResponse.isTruncated()) {
+                    listRequest = listRequest.toBuilder()
+                            .continuationToken(listResponse.nextContinuationToken())
+                            .build();
+                }
+
+            } while (listResponse.isTruncated());
+
+            log.info("文件夹复制完成: source={}:{}, target={}:{}, 共复制 {} 个文件",
+                    sourceBucket, sourceFolderPath, targetBucket, targetFolderPath, copiedCount);
+
+            return copiedCount;
+
+        } catch (Exception e) {
+            log.error("文件夹复制失败: source={}:{}, target={}:{}",
+                    sourceBucket, sourceFolderPath, targetBucket, targetFolderPath, e);
+            throw new RuntimeException("文件夹复制失败: " + e.getMessage(), e);
         }
     }
 }

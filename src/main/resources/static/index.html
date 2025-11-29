@@ -89,13 +89,44 @@
             animation: slide-up 0.3s ease-out;
         }
 
+        /* 工具栏滑入动画 */
+        .toolbar-slide-enter-active,
+        .toolbar-slide-leave-active {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toolbar-slide-enter-from {
+            transform: translate(-50%, 20px);
+            opacity: 0;
+        }
+        .toolbar-slide-leave-to {
+            transform: translate(-50%, 20px);
+            opacity: 0;
+        }
+
         /* 文件卡片悬停效果 */
         .file-card {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
         .file-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+        }
+        .file-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: inherit;
+            pointer-events: none;
+        }
+        .file-card:hover::before {
+            opacity: 1;
         }
 
         /* Markdown渲染样式 */
@@ -228,154 +259,238 @@
             background: #e5e7eb;
             margin: 4px 0;
         }
+
+        /* 复选框简单优化 */
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+
+        /* 选中的文件卡片样式 */
+        .file-card.selected {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .file-card.selected::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            padding: 2px;
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: borderPulse 2s ease-in-out infinite;
+        }
+        @keyframes borderPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
     </style>
 </head>
 <body class="h-full overflow-hidden bg-gray-50">
     <div id="app" v-cloak class="flex h-screen w-full">
         <!-- 左侧边栏 -->
-        <aside class="w-64 bg-gradient-to-b from-blue-600 to-blue-700 text-white flex flex-col h-full flex-shrink-0 shadow-lg">
+        <aside :style="{ width: sidebarWidth + 'px' }" class="bg-white border-r border-gray-200 flex flex-col h-full flex-shrink-0 shadow-sm relative">
             <!-- Logo区域 -->
-            <div class="p-6 border-b border-blue-500/30">
+            <div class="p-6 border-b border-gray-100">
                 <div class="flex items-center gap-3 mb-1">
-                    <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-md">
-                        <i class="bi bi-cloud-fill text-blue-600 text-xl"></i>
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 shadow-md">
+                        <i class="bi bi-cloud-fill text-white text-xl"></i>
                     </div>
                     <div class="flex-1">
-                        <h1 class="font-bold text-lg">S3文件管理器</h1>
-                        <p class="text-xs text-blue-100">对象存储</p>
+                        <h1 class="font-bold text-lg text-gray-900">S3文件管理器</h1>
+                        <p class="text-xs text-gray-500">对象存储服务</p>
                     </div>
                 </div>
             </div>
 
             <!-- 存储桶分类列表 -->
-            <div class="flex-1 overflow-y-auto scrollbar-thin p-4">
+            <div class="flex-1 overflow-y-auto scrollbar-thin p-4 bg-gray-50/50">
                 <div class="mb-4">
-                    <p class="text-xs font-semibold text-blue-100 uppercase tracking-wider mb-2 px-2">存储桶列表</p>
-                    <div class="space-y-1">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">存储桶</p>
+                    <div class="space-y-1.5">
                         <button
                             v-for="bucket in buckets"
                             :key="bucket"
                             @click="selectBucket(bucket)"
-                            :class="currentBucket === bucket ? 'bg-white text-blue-700 shadow-md' : 'text-white hover:bg-blue-500'"
-                            class="w-full px-3 py-2.5 rounded-lg text-left flex items-center gap-3 transition-all text-sm">
-                            <i class="bi bi-database text-lg"></i>
+                            :class="currentBucket === bucket ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'text-gray-700 hover:bg-white hover:border-gray-300 border-transparent'"
+                            class="w-full px-4 py-3 rounded-lg text-left flex items-center gap-3 transition-all duration-200 text-sm font-medium group border">
+                            <i class="bi bi-database text-lg transition-transform group-hover:scale-110" :class="currentBucket === bucket ? 'text-blue-600' : 'text-gray-400'"></i>
                             <span class="truncate flex-1">{{ bucket }}</span>
-                            <div v-if="currentBucket === bucket" class="w-2 h-2 rounded-full bg-blue-600"></div>
+                            <i v-if="currentBucket === bucket" class="bi bi-check-circle-fill text-sm text-blue-600"></i>
                         </button>
                     </div>
                 </div>
             </div>
 
             <!-- 刷新按钮 -->
-            <div class="p-4 border-t border-blue-500/30">
+            <div class="p-3 border-t border-gray-200 bg-white">
                 <button
                     @click="loadFiles"
-                    class="w-full bg-white hover:bg-blue-50 text-blue-700 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-md">
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 rounded-lg font-medium transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg text-sm">
                     <i class="bi bi-arrow-clockwise"></i>
                     刷新列表
                 </button>
             </div>
+
+            <!-- 拖拽调整宽度的把手 -->
+            <div
+                @mousedown="startResizeSidebar"
+                class="absolute top-0 right-0 w-1 h-full cursor-ew-resize hover:bg-blue-300 transition-colors group">
+                <div class="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-gray-300 rounded-full group-hover:bg-blue-400 group-hover:shadow-md transition-all duration-200"></div>
+            </div>
         </aside>
 
         <!-- 主内容区 -->
-        <main class="flex-1 flex flex-col min-w-0 bg-white">
+        <main class="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
             <!-- 顶部标题栏 -->
-            <div class="px-8 py-6 border-b border-gray-200">
+            <div class="px-8 py-6 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">{{ currentBucket || '请选择存储桶' }}</h2>
-                    <div class="flex items-center gap-3">
-                        <!-- 视图切换 -->
-                        <div class="flex items-center gap-1 bg-blue-50 rounded-lg p-1">
+                    <h2 class="text-2xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">{{ currentBucket || '请选择存储桶' }}</h2>
+                    <div class="flex items-center gap-2">
+                        <!-- 左侧工具组：批量操作 + 视图切换 + 工具按钮 -->
+                        <div class="flex items-center gap-1 bg-gray-50 rounded-lg p-1 border border-gray-200 h-10">
+                            <!-- 批量操作开关 -->
+                            <button
+                                @click="batchMode = !batchMode"
+                                :class="batchMode ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md' : 'text-gray-600 hover:bg-white'"
+                                class="flex items-center gap-1.5 px-2.5 h-8 rounded-md transition-all"
+                                :title="batchMode ? '关闭批量操作 (已选 ' + selectedFilesCount + ' 项)' : '开启批量操作'">
+                                <i :class="batchMode ? 'bi-check-square-fill' : 'bi-ui-checks'" class="text-base"></i>
+                                <span v-if="batchMode && selectedFilesCount > 0" class="font-bold text-xs">{{ selectedFilesCount }}</span>
+                            </button>
+
+                            <div class="w-px h-5 bg-gray-300"></div>
+
+                            <!-- 视图切换 -->
                             <button
                                 @click="viewMode = 'list'"
-                                :class="viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-100'"
-                                class="p-2 rounded-md transition-colors text-gray-700"
+                                :class="viewMode === 'list' ? 'bg-white shadow-md text-gray-900' : 'text-gray-600 hover:bg-white'"
+                                class="w-8 h-8 flex items-center justify-center rounded-md transition-all"
                                 title="列表视图">
-                                <i class="bi bi-list-ul text-lg"></i>
+                                <i class="bi bi-list-ul text-base"></i>
                             </button>
                             <button
                                 @click="viewMode = 'grid'"
-                                :class="viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-100'"
-                                class="p-2 rounded-md transition-colors text-gray-700"
+                                :class="viewMode === 'grid' ? 'bg-white shadow-md text-gray-900' : 'text-gray-600 hover:bg-white'"
+                                class="w-8 h-8 flex items-center justify-center rounded-md transition-all"
                                 title="网格视图">
-                                <i class="bi bi-grid-3x3-gap text-lg"></i>
+                                <i class="bi bi-grid-3x3-gap text-base"></i>
+                            </button>
+
+                            <div class="w-px h-5 bg-gray-300"></div>
+
+                            <!-- 配置 -->
+                            <button
+                                @click="goToConfig"
+                                class="w-8 h-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-white transition-all"
+                                title="配置管理">
+                                <i class="bi bi-gear-fill text-base"></i>
+                            </button>
+
+                            <!-- 清除缓存 -->
+                            <button
+                                @click="clearServiceWorkerCache"
+                                class="w-8 h-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-white hover:text-red-600 transition-all"
+                                title="清除缓存">
+                                <i class="bi bi-trash-fill text-base"></i>
                             </button>
                         </div>
 
-                        <!-- 返回配置 -->
-                        <button
-                            @click="goToConfig"
-                            class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
-                            title="配置管理">
-                            <i class="bi bi-gear-fill text-lg"></i>
-                        </button>
-
-                        <!-- 清除缓存 -->
-                        <button
-                            @click="clearServiceWorkerCache"
-                            class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
-                            title="清除缓存">
-                            <i class="bi bi-trash-fill text-lg"></i>
-                        </button>
-
-                        <div class="h-6 w-px bg-gray-300"></div>
-
-                        <!-- 上传按钮 -->
+                        <!-- 右侧主操作按钮 -->
                         <button
                             @click="showUploadDialog = true"
-                            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md">
-                            <i class="bi bi-cloud-upload"></i>
-                            上传文件
+                            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 h-10 rounded-lg transition-all shadow-md hover:shadow-lg">
+                            <i class="bi bi-cloud-upload text-base"></i>
+                            <span class="font-medium text-sm">上传文件</span>
                         </button>
-                        <!-- 新建文件夹 -->
                         <button
                             @click="showCreateFolderDialog = true"
-                            class="flex items-center gap-2 bg-white hover:bg-gray-50 text-blue-700 px-4 py-2 rounded-lg transition-colors shadow-md">
-                            <i class="bi bi-folder-plus"></i>
-                            新建文件夹
+                            class="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-4 h-10 rounded-lg transition-all border border-gray-200 hover:border-gray-300 shadow-sm">
+                            <i class="bi bi-folder-plus text-base"></i>
+                            <span class="font-medium text-sm">新建文件夹</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- 搜索框 -->
-                <div class="relative">
-                    <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg"></i>
-                    <input
-                        type="text"
-                        v-model="searchKeyword"
-                        @keyup.enter="handleSearch"
-                        placeholder="按文件名或前缀搜索"
-                        class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-                </div>
+                <!-- 搜索和筛选区域 -->
+                <div class="flex items-center gap-2">
+                    <!-- 搜索框 -->
+                    <div class="relative flex-1">
+                        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input
+                            type="text"
+                            v-model="searchKeyword"
+                            @keyup.enter="handleSearch"
+                            placeholder="搜索文件名或前缀"
+                            class="w-full h-10 pl-10 pr-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all">
+                    </div>
 
-                <!-- 高级筛选 -->
-                <div class="flex items-center gap-3 mt-3">
+                    <!-- 高级筛选按钮 -->
                     <button
                         @click="showAdvancedFilters = !showAdvancedFilters"
-                        class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                        <i class="bi bi-funnel text-lg"></i>
-                        <span>高级筛选</span>
-                        <i :class="showAdvancedFilters ? 'bi-chevron-up' : 'bi-chevron-down'" class="text-xs"></i>
+                        :class="showAdvancedFilters || hasActiveFilters ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'"
+                        class="flex items-center gap-2 px-3 h-10 text-sm font-medium rounded-lg transition-all border relative">
+                        <i class="bi bi-funnel text-base"></i>
+                        <span>筛选</span>
+                        <span v-if="hasActiveFilters" class="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-semibold">{{ activeFilterCount }}</span>
+                        <i :class="showAdvancedFilters ? 'bi-chevron-up' : 'bi-chevron-down'" class="text-xs ml-1"></i>
                     </button>
-                    <div v-if="hasActiveFilters" class="flex items-center gap-2">
-                        <span class="text-xs text-gray-600">已启用 {{ activeFilterCount }} 个筛选</span>
+                </div>
+
+                <!-- 已启用筛选标签 -->
+                <div v-if="hasActiveFilters && !showAdvancedFilters" class="flex items-center gap-2 mt-2">
+                    <span class="text-xs text-gray-500">已启用:</span>
+                    <div class="flex items-center gap-2">
+                        <span v-if="filters.fileType" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
+                            文件类型
+                            <button @click="filters.fileType = ''" class="hover:bg-blue-100 rounded">
+                                <i class="bi bi-x text-sm"></i>
+                            </button>
+                        </span>
+                        <span v-if="filters.startDate || filters.endDate" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
+                            时间范围
+                            <button @click="filters.startDate = ''; filters.endDate = ''" class="hover:bg-blue-100 rounded">
+                                <i class="bi bi-x text-sm"></i>
+                            </button>
+                        </span>
                         <button
                             @click="clearFilters"
-                            class="text-xs text-blue-600 hover:text-blue-700 underline">
+                            class="text-xs text-gray-500 hover:text-gray-700 underline">
                             清除全部
                         </button>
                     </div>
                 </div>
 
                 <!-- 筛选面板 -->
-                <div v-if="showAdvancedFilters" class="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div v-if="showAdvancedFilters" class="mt-3 p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                            <i class="bi bi-sliders text-blue-600"></i>
+                            高级筛选
+                        </h3>
+                        <button v-if="hasActiveFilters" @click="clearFilters" class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            重置
+                        </button>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <!-- 文件类型筛选 -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">文件类型</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-2">
+                                <i class="bi bi-file-earmark text-gray-400 mr-1"></i>
+                                文件类型
+                            </label>
                             <select
                                 v-model="filters.fileType"
-                                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all">
                                 <option value="">全部类型</option>
                                 <option value="folder">📁 文件夹</option>
                                 <option value="image">🖼️ 图片</option>
@@ -390,67 +505,78 @@
 
                         <!-- 时间范围 - 开始 -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-2">
+                                <i class="bi bi-calendar-check text-gray-400 mr-1"></i>
+                                开始日期
+                            </label>
                             <input
                                 type="date"
                                 v-model="filters.startDate"
-                                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all">
                         </div>
 
                         <!-- 时间范围 - 结束 -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">结束日期</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-2">
+                                <i class="bi bi-calendar-x text-gray-400 mr-1"></i>
+                                结束日期
+                            </label>
                             <input
                                 type="date"
                                 v-model="filters.endDate"
-                                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all">
                         </div>
                     </div>
 
                     <!-- 快捷时间选择 -->
-                    <div class="flex items-center gap-2 mt-3">
-                        <span class="text-xs text-gray-600">快捷选择:</span>
-                        <button
-                            @click="setQuickDateRange('today')"
-                            class="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">
-                            今天
-                        </button>
-                        <button
-                            @click="setQuickDateRange('week')"
-                            class="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">
-                            最近7天
-                        </button>
-                        <button
-                            @click="setQuickDateRange('month')"
-                            class="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">
-                            最近30天
-                        </button>
-                        <button
-                            @click="setQuickDateRange('year')"
-                            class="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">
-                            最近一年
-                        </button>
+                    <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                        <span class="text-xs font-medium text-gray-600">
+                            <i class="bi bi-lightning text-gray-400 mr-1"></i>
+                            快速选择:
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="setQuickDateRange('today')"
+                                class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-200">
+                                今天
+                            </button>
+                            <button
+                                @click="setQuickDateRange('week')"
+                                class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-200">
+                                最近7天
+                            </button>
+                            <button
+                                @click="setQuickDateRange('month')"
+                                class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-200">
+                                最近30天
+                            </button>
+                            <button
+                                @click="setQuickDateRange('year')"
+                                class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-200">
+                                最近一年
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- 面包屑导航 -->
-            <div class="px-8 py-4 border-b border-gray-200 bg-gray-50">
-                <nav class="flex items-center gap-2 text-sm">
+            <div class="px-8 py-2 border-b border-gray-200 bg-gray-50">
+                <nav class="flex items-center gap-1 text-sm">
                     <button
                         @click="navigateToPath('')"
                         @contextmenu="showContextMenu($event, 'breadcrumb', '')"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-gray-100 text-gray-700 hover:text-blue-600 transition-colors">
-                        <i class="bi bi-house-fill"></i>
-                        <span>根目录</span>
+                        class="flex items-center gap-1.5 px-2.5 h-8 rounded-md hover:bg-white text-gray-700 hover:text-blue-600 transition-all">
+                        <i class="bi bi-house-fill text-sm"></i>
+                        <span class="text-xs font-medium">根目录</span>
                     </button>
                     <template v-for="(part, index) in pathParts" :key="index">
-                        <i class="bi bi-chevron-right text-gray-500 text-xs"></i>
+                        <i class="bi bi-chevron-right text-gray-400 text-xs"></i>
                         <button
                             @click="navigateToPath(getPathUpTo(index))"
                             @contextmenu="showContextMenu($event, 'breadcrumb', getPathUpTo(index))"
-                            class="px-3 py-1.5 rounded-md hover:bg-gray-100 font-medium"
-                            :class="index === pathParts.length - 1 ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'">
+                            class="px-2.5 h-8 rounded-md hover:bg-white font-medium transition-all text-xs"
+                            :class="index === pathParts.length - 1 ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:text-blue-600'">
                             {{ part }}
                         </button>
                     </template>
@@ -459,6 +585,37 @@
 
             <!-- 文件列表区域 -->
             <div class="flex-1 overflow-y-auto scrollbar-thin p-8">
+                <!-- 批量操作工具栏 -->
+                <div v-if="batchMode && !loading && displayFiles.length > 0" class="mb-4 flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <i class="bi bi-info-circle text-purple-600 text-lg"></i>
+                        <span class="text-sm text-purple-900">
+                            <span class="font-semibold">批量操作模式</span>
+                            <span class="text-purple-700">- 点击文件选择，支持 Ctrl/Shift 多选</span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            @click="selectAll"
+                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-purple-50 text-purple-700 text-sm font-medium rounded-lg transition-all duration-200 border border-purple-200">
+                            <i class="bi bi-check-all"></i>
+                            全选
+                        </button>
+                        <button
+                            @click="clearSelection"
+                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-purple-50 text-purple-700 text-sm font-medium rounded-lg transition-all duration-200 border border-purple-200">
+                            <i class="bi bi-x-circle"></i>
+                            清空
+                        </button>
+                        <button
+                            @click="invertSelection"
+                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-purple-50 text-purple-700 text-sm font-medium rounded-lg transition-all duration-200 border border-purple-200">
+                            <i class="bi bi-arrow-left-right"></i>
+                            反选
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 加载状态 -->
                 <div v-if="loading" class="flex flex-col items-center justify-center h-64">
                     <i class="bi bi-arrow-clockwise text-6xl text-gray-400 mb-4 opacity-50 animate-spin"></i>
@@ -472,72 +629,88 @@
                 </div>
 
                 <!-- 列表视图 -->
-                <div v-else-if="viewMode === 'list'" class="space-y-1">
+                <div v-else-if="viewMode === 'list'" class="space-y-0.5">
                     <div
                         v-for="file in displayFiles"
                         :key="file.key"
-                        @click="handleFileClick(file)"
+                        @click="batchMode ? toggleFileSelection(file, $event) : handleFileClick(file)"
                         @contextmenu="showContextMenu($event, 'file', file)"
-                        class="file-card flex items-center gap-3 px-4 py-2.5 border border-gray-200 bg-white rounded-lg cursor-pointer group">
-                        <!-- 文件图标 -->
-                        <div class="flex-shrink-0">
-                            <i :class="[getFileIcon(file), getFileColor(file)]" class="text-2xl"></i>
+                        :class="['file-card', {'selected': batchMode && isFileSelected(file)}]"
+                        class="flex items-center gap-2.5 px-3 py-1.5 border border-gray-200 bg-white rounded-md cursor-pointer group hover:border-blue-300 transition-all">
+                        <!-- 复选框（批量模式） -->
+                        <div v-if="batchMode" class="flex-shrink-0">
+                            <input
+                                type="checkbox"
+                                :checked="isFileSelected(file)"
+                                @click.stop="toggleFileSelection(file, $event)"
+                                class="w-4 h-4">
                         </div>
 
-                        <!-- 文件信息 -->
+                        <!-- 文件图标 -->
+                        <div class="flex-shrink-0 w-7 flex items-center justify-center">
+                            <i :class="[getFileIcon(file), getFileColor(file)]" class="text-xl"></i>
+                        </div>
+
+                        <!-- 文件名 -->
                         <div class="flex-1 min-w-0">
                             <h3 class="text-sm font-medium text-gray-900 truncate">{{ file.name }}</h3>
-                            <div class="flex items-center gap-3 text-xs text-gray-600">
-                                <span v-if="!file.isFolder">{{ formatFileSize(file.size) }}</span>
-                                <span v-if="file.isFolder && folderSizes[file.key]">
-                                    <i class="bi bi-hdd"></i> {{ formatFileSize(folderSizes[file.key]) }}
-                                </span>
-                                <span v-if="!file.isFolder">{{ formatDate(file.lastModified) }}</span>
-                            </div>
+                        </div>
+
+                        <!-- 文件大小 -->
+                        <div class="w-20 text-right flex-shrink-0">
+                            <span v-if="!file.isFolder" class="text-xs text-gray-600">{{ formatFileSize(file.size) }}</span>
+                            <span v-if="file.isFolder && folderSizes[file.key]" class="text-xs text-gray-600">
+                                {{ formatFileSize(folderSizes[file.key]) }}
+                            </span>
+                            <span v-if="file.isFolder && !folderSizes[file.key]" class="text-xs text-gray-400">--</span>
+                        </div>
+
+                        <!-- 修改时间 -->
+                        <div class="w-28 text-right flex-shrink-0">
+                            <span v-if="!file.isFolder" class="text-xs text-gray-500">{{ formatDate(file.lastModified) }}</span>
+                            <span v-if="file.isFolder" class="text-xs text-gray-400">--</span>
                         </div>
 
                         <!-- 操作按钮（悬停显示） -->
-                        <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="w-16 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                             <button
                                 v-if="!file.isFolder && canPreview(file)"
                                 @click.stop="previewFile(file)"
-                                class="p-1.5 hover:bg-gray-50 rounded text-gray-600 hover:text-green-600"
+                                class="p-1 hover:bg-green-50 rounded text-gray-500 hover:text-green-600 transition-colors"
                                 title="预览">
-                                <i class="bi bi-eye text-sm"></i>
+                                <i class="bi bi-eye text-base"></i>
                             </button>
                             <button
                                 v-if="!file.isFolder"
                                 @click.stop="downloadFile(file)"
-                                class="p-1.5 hover:bg-gray-50 rounded text-gray-600 hover:text-blue-600"
+                                class="p-1 hover:bg-blue-50 rounded text-gray-500 hover:text-blue-600 transition-colors"
                                 title="下载">
-                                <i class="bi bi-download text-sm"></i>
-                            </button>
-                            <button
-                                @click.stop="renameFile(file)"
-                                class="p-1.5 hover:bg-gray-50 rounded text-gray-600 hover:text-purple-600"
-                                title="重命名">
-                                <i class="bi bi-pencil text-sm"></i>
-                            </button>
-                            <button
-                                @click.stop="deleteFile(file)"
-                                class="p-1.5 hover:bg-gray-50 rounded text-gray-600 hover:text-red-600"
-                                title="删除">
-                                <i class="bi bi-trash text-sm"></i>
+                                <i class="bi bi-download text-base"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- 网格视图 -->
-                <div v-else-if="viewMode === 'grid'" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 gap-2">
+                <div v-else-if="viewMode === 'grid'" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 gap-3">
                     <div
                         v-for="file in displayFiles"
                         :key="file.key"
-                        @click="handleFileClick(file)"
+                        @click="batchMode ? toggleFileSelection(file, $event) : handleFileClick(file)"
                         @contextmenu="showContextMenu($event, 'file', file)"
-                        class="file-card group relative flex flex-col items-center p-2 border border-gray-200 bg-white rounded-lg cursor-pointer hover:border-blue-400">
+                        :class="{'selected': batchMode && isFileSelected(file)}"
+                        class="file-card group relative flex flex-col items-center p-3 border border-gray-200 bg-white rounded-lg cursor-pointer hover:border-blue-400">
+                        <!-- 复选框（批量模式，左上角） -->
+                        <div v-if="batchMode" class="absolute top-2 left-2 z-10">
+                            <input
+                                type="checkbox"
+                                :checked="isFileSelected(file)"
+                                @click.stop="toggleFileSelection(file, $event)"
+                                class="w-5 h-5 cursor-pointer">
+                        </div>
+
                         <!-- 文件图标 -->
-                        <i :class="[getFileIcon(file), getFileColor(file)]" class="text-3xl mb-2"></i>
+                        <i :class="[getFileIcon(file), getFileColor(file)]" class="text-5xl mb-2"></i>
 
                         <!-- 文件名 -->
                         <h3 class="text-xs font-medium text-gray-900 text-center truncate w-full px-1" :title="file.name">
@@ -545,40 +718,28 @@
                         </h3>
 
                         <!-- 文件信息 -->
-                        <div v-if="!file.isFolder" class="text-xs text-gray-600 mt-0.5 text-center">
-                            <div class="text-xs">{{ formatFileSize(file.size) }}</div>
+                        <div v-if="!file.isFolder" class="text-xs text-gray-500 mt-0.5 text-center">
+                            {{ formatFileSize(file.size) }}
                         </div>
-                        <div v-else-if="file.isFolder && folderSizes[file.key]" class="text-xs text-gray-600 mt-0.5 text-center">
-                            <div class="text-xs"><i class="bi bi-hdd"></i> {{ formatFileSize(folderSizes[file.key]) }}</div>
+                        <div v-else-if="file.isFolder && folderSizes[file.key]" class="text-xs text-gray-500 mt-0.5 text-center">
+                            <i class="bi bi-hdd"></i> {{ formatFileSize(folderSizes[file.key]) }}
                         </div>
 
                         <!-- 操作按钮（悬停显示） -->
-                        <div class="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-lg shadow-lg p-0.5">
+                        <div class="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-0.5">
                             <button
                                 v-if="!file.isFolder && canPreview(file)"
                                 @click.stop="previewFile(file)"
-                                class="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-green-600"
+                                class="p-1.5 hover:bg-gradient-to-br hover:from-green-50 hover:to-green-100 rounded-lg text-gray-600 hover:text-green-600 transition-all duration-200"
                                 title="预览">
                                 <i class="bi bi-eye text-sm"></i>
                             </button>
                             <button
                                 v-if="!file.isFolder"
                                 @click.stop="downloadFile(file)"
-                                class="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
+                                class="p-1.5 hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 rounded-lg text-gray-600 hover:text-blue-600 transition-all duration-200"
                                 title="下载">
                                 <i class="bi bi-download text-sm"></i>
-                            </button>
-                            <button
-                                @click.stop="renameFile(file)"
-                                class="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-purple-600"
-                                title="重命名">
-                                <i class="bi bi-pencil text-sm"></i>
-                            </button>
-                            <button
-                                @click.stop="deleteFile(file)"
-                                class="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-red-600"
-                                title="删除">
-                                <i class="bi bi-trash text-sm"></i>
                             </button>
                         </div>
                     </div>
@@ -586,21 +747,21 @@
 
                 <!-- 分页 -->
                 <div v-if="!loading && totalPages > 1" class="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-                    <div class="text-sm text-gray-700">
+                    <div class="text-sm font-medium text-gray-700">
                         显示 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, sortedFiles.length) }} / 共 {{ sortedFiles.length }} 项
                     </div>
                     <div class="flex items-center gap-2">
-                        <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg bg-white hover:bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
                             <i class="bi bi-chevron-bar-left"></i>
                         </button>
-                        <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg bg-white hover:bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
                             <i class="bi bi-chevron-left"></i>
                         </button>
-                        <span class="px-4 py-1.5 text-sm text-gray-900">第 {{ currentPage }} / {{ totalPages }} 页</span>
-                        <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-1.5 rounded-lg bg-white hover:bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="px-4 py-1.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                        <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
                             <i class="bi bi-chevron-right"></i>
                         </button>
-                        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages" class="px-3 py-1.5 rounded-lg bg-white hover:bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
                             <i class="bi bi-chevron-bar-right"></i>
                         </button>
                     </div>
@@ -609,46 +770,56 @@
         </main>
 
         <!-- 上传对话框 -->
-        <div v-if="showUploadDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showUploadDialog = false">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
-                <h3 class="text-xl font-bold mb-4 text-gray-900">上传文件</h3>
+        <div v-if="showUploadDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showUploadDialog = false">
+            <div class="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-blue-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i class="bi bi-cloud-upload text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">上传文件</h3>
+                </div>
                 <input
                     type="file"
                     multiple
                     @change="handleFileSelect"
-                    class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 mb-4">
+                    class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-600 file:to-blue-700 file:text-white hover:file:from-blue-700 hover:file:to-blue-800 file:transition-all file:duration-200 file:shadow-lg file:shadow-blue-500/30 mb-4">
                 <div class="flex justify-end gap-3">
-                    <button @click="showUploadDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">取消</button>
-                    <button @click="doUploadFiles" :disabled="uploadFiles.length === 0" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">上传</button>
+                    <button @click="showUploadDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
+                    <button @click="doUploadFiles" :disabled="uploadFiles.length === 0" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-blue-500/30">上传</button>
                 </div>
             </div>
         </div>
 
         <!-- 创建文件夹对话框 -->
-        <div v-if="showCreateFolderDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showCreateFolderDialog = false">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
-                <h3 class="text-xl font-bold mb-4 text-gray-900">新建文件夹</h3>
+        <div v-if="showCreateFolderDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showCreateFolderDialog = false">
+            <div class="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-blue-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i class="bi bi-folder-plus text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">新建文件夹</h3>
+                </div>
                 <input
                     v-model="folderName"
                     type="text"
                     placeholder="请输入文件夹名称"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 bg-white text-gray-900 placeholder-gray-500">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200">
                 <div class="flex justify-end gap-3">
-                    <button @click="showCreateFolderDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">取消</button>
-                    <button @click="createFolder" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">创建</button>
+                    <button @click="showCreateFolderDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
+                    <button @click="createFolder" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30">创建</button>
                 </div>
             </div>
         </div>
 
         <!-- 删除确认对话框 -->
-        <div v-if="showDeleteDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showDeleteDialog = false">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
+        <div v-if="showDeleteDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showDeleteDialog = false">
+            <div class="bg-gradient-to-br from-white to-red-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-red-200">
                 <div class="flex items-center gap-4 mb-4">
-                    <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-exclamation-triangle text-red-600 text-2xl"></i>
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/30">
+                        <i class="bi bi-exclamation-triangle text-white text-2xl"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-lg font-bold text-gray-900">确认删除</h3>
+                        <h3 class="text-lg font-bold bg-gradient-to-r from-gray-900 to-red-900 bg-clip-text text-transparent">确认删除</h3>
                         <p class="text-sm text-gray-600 mt-1">此操作不可恢复</p>
                     </div>
                 </div>
@@ -664,8 +835,8 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-3">
-                    <button @click="showDeleteDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">取消</button>
-                    <button @click="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                    <button @click="showDeleteDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
+                    <button @click="confirmDelete" class="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 flex items-center gap-2 transition-all duration-200 shadow-lg shadow-red-500/30">
                         <i class="bi bi-trash"></i>
                         确认删除
                     </button>
@@ -674,14 +845,14 @@
         </div>
 
         <!-- 重命名对话框 -->
-        <div v-if="showRenameDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showRenameDialog = false">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
+        <div v-if="showRenameDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showRenameDialog = false">
+            <div class="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-purple-200">
                 <div class="flex items-center gap-4 mb-4">
-                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-pencil-square text-blue-600 text-2xl"></i>
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
+                        <i class="bi bi-pencil-square text-white text-2xl"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-lg font-bold text-gray-900">重命名</h3>
+                        <h3 class="text-lg font-bold bg-gradient-to-r from-gray-900 to-purple-900 bg-clip-text text-transparent">重命名</h3>
                         <p class="text-sm text-gray-600 mt-1">{{ fileToRename?.isFolder ? '文件夹' : '文件' }}</p>
                     </div>
                 </div>
@@ -703,11 +874,11 @@
                         type="text"
                         placeholder="请输入新名称"
                         @keyup.enter="confirmRename"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all duration-200">
                 </div>
                 <div class="flex justify-end gap-3">
-                    <button @click="showRenameDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">取消</button>
-                    <button @click="confirmRename" :disabled="!newFileName.trim()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button @click="showRenameDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
+                    <button @click="confirmRename" :disabled="!newFileName.trim()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-purple-500/30">
                         <i class="bi bi-check-lg"></i>
                         确认重命名
                     </button>
@@ -716,14 +887,14 @@
         </div>
 
         <!-- 分享链接对话框 -->
-        <div v-if="showShareDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showShareDialog = false">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
+        <div v-if="showShareDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showShareDialog = false">
+            <div class="bg-gradient-to-br from-white to-green-50/30 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up border border-green-200">
                 <div class="flex items-center gap-4 mb-4">
-                    <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-share text-green-600 text-2xl"></i>
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-500/30">
+                        <i class="bi bi-share text-white text-2xl"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-lg font-bold text-gray-900">生成分享链接</h3>
+                        <h3 class="text-lg font-bold bg-gradient-to-r from-gray-900 to-green-900 bg-clip-text text-transparent">生成分享链接</h3>
                         <p class="text-sm text-gray-600 mt-1">设置链接过期时间</p>
                     </div>
                 </div>
@@ -742,7 +913,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">过期时间</label>
                     <select
                         v-model="shareExpiration"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all duration-200">
                         <option value="3600">1小时</option>
                         <option value="21600">6小时</option>
                         <option value="86400">1天</option>
@@ -761,7 +932,7 @@
                             @focus="$event.target.select()">
                         <button
                             @click="copyShareUrl"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap">
+                            class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 flex items-center gap-2 whitespace-nowrap transition-all duration-200 shadow-lg shadow-green-500/30">
                             <i class="bi bi-clipboard"></i>
                             复制
                         </button>
@@ -772,11 +943,11 @@
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <button @click="showShareDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">取消</button>
+                    <button @click="showShareDialog = false" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">取消</button>
                     <button
                         v-if="!shareUrl"
                         @click="generateShareUrl"
-                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+                        class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 flex items-center gap-2 transition-all duration-200 shadow-lg shadow-green-500/30">
                         <i class="bi bi-link-45deg"></i>
                         生成链接
                     </button>
@@ -960,7 +1131,7 @@
                             'text-red-900': toast.type === 'error',
                             'text-blue-900': toast.type === 'info'
                         }">
-                        {{ toast.type === 'success' ? '上传成功' : toast.type === 'error' ? '下载失败' : '通知' }}
+                        {{ toast.title }}
                     </h4>
                     <p class="text-xs text-gray-700">{{ toast.message }}</p>
                 </div>
@@ -997,6 +1168,59 @@
             </div>
             <p class="text-xs text-gray-700 mt-2">剩余时间: 约 {{ uploadProgress.remainingTime }}</p>
         </div>
+
+        <!-- 批量操作浮动工具栏 -->
+        <transition name="toolbar-slide">
+            <div v-if="batchMode && hasSelectedFiles" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+                <div class="bg-white rounded-full shadow-2xl border border-gray-200 flex items-center px-3 py-2">
+                    <!-- 选择计数 -->
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full mr-2">
+                        <i class="bi bi-check-lg text-white text-sm"></i>
+                        <span class="text-sm font-bold text-white">{{ selectedFilesCount }}</span>
+                    </div>
+
+                    <!-- 操作按钮组 -->
+                    <div class="flex items-center gap-1">
+                        <button
+                            @click="batchDownload"
+                            class="w-10 h-10 flex items-center justify-center hover:bg-blue-50 text-blue-600 rounded-full transition-all"
+                            title="下载">
+                            <i class="bi bi-download text-lg"></i>
+                        </button>
+                        <button
+                            @click="batchMove"
+                            class="w-10 h-10 flex items-center justify-center hover:bg-purple-50 text-purple-600 rounded-full transition-all"
+                            title="移动">
+                            <i class="bi bi-folder-symlink text-lg"></i>
+                        </button>
+                        <button
+                            @click="batchCopyToBucket"
+                            class="w-10 h-10 flex items-center justify-center hover:bg-green-50 text-green-600 rounded-full transition-all"
+                            title="复制">
+                            <i class="bi bi-files text-lg"></i>
+                        </button>
+
+                        <div class="w-px h-6 bg-gray-300 mx-1"></div>
+
+                        <button
+                            @click="batchDelete"
+                            class="w-10 h-10 flex items-center justify-center hover:bg-red-50 text-red-600 rounded-full transition-all"
+                            title="删除">
+                            <i class="bi bi-trash text-lg"></i>
+                        </button>
+
+                        <div class="w-px h-6 bg-gray-300 mx-1"></div>
+
+                        <button
+                            @click="clearSelection"
+                            class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 text-gray-500 rounded-full transition-all"
+                            title="取消">
+                            <i class="bi bi-x-lg text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
 
         <!-- 右键菜单 -->
         <div v-if="contextMenu.show"
@@ -1140,7 +1364,18 @@
                     imageCompression: false,
                     compressedImageUrl: '',
                     // 文件夹大小缓存
-                    folderSizes: {}
+                    folderSizes: {},
+                    // 侧边栏宽度
+                    sidebarWidth: 256, // 默认256px
+                    isResizingSidebar: false,
+                    resizeStartX: 0,
+                    resizeStartWidth: 0,
+                    // 选中的文件
+                    selectedFiles: new Set(),
+                    // 批量操作模式
+                    batchMode: false,
+                    // 用于 Shift 多选
+                    lastClickedIndex: -1
                 }
             },
             computed: {
@@ -1207,6 +1442,21 @@
                 },
                 displayImageUrl() {
                     return this.imageCompression && this.compressedImageUrl ? this.compressedImageUrl : this.previewUrl;
+                },
+                hasSelectedFiles() {
+                    return this.selectedFiles.size > 0;
+                },
+                selectedFilesCount() {
+                    return this.selectedFiles.size;
+                }
+            },
+            watch: {
+                // 监听批量模式切换
+                batchMode(newVal) {
+                    if (!newVal) {
+                        // 关闭批量模式时清空选择
+                        this.clearSelection();
+                    }
                 }
             },
             mounted() {
@@ -1217,6 +1467,15 @@
                 });
                 // 初始化图片懒加载
                 this.initLazyLoading();
+                // 加载保存的侧边栏宽度
+                const savedWidth = localStorage.getItem('sidebarWidth');
+                if (savedWidth) {
+                    this.sidebarWidth = parseInt(savedWidth);
+                }
+            },
+            beforeUnmount() {
+                document.removeEventListener('mousemove', this.handleResizeSidebar);
+                document.removeEventListener('mouseup', this.stopResizeSidebar);
             },
             methods: {
                 goToConfig() {
@@ -1411,13 +1670,13 @@
                             });
 
                             if (response.data.success) {
-                                this.showToast('success', `文件 "${file.name}" 已成功上传。`);
+                                this.showToast('success', `文件 "${file.name}" 已成功上传。`, '上传成功');
                             } else {
-                                this.showToast('error', `文件 "${file.name}" 上传失败。`);
+                                this.showToast('error', `文件 "${file.name}" 上传失败。`, '上传失败');
                             }
                         } catch (error) {
                             console.error(`上传失败: ${file.name}`, error);
-                            this.showToast('error', `文件 "${file.name}" 上传失败。`);
+                            this.showToast('error', `文件 "${file.name}" 上传失败。`, '上传失败');
                         }
                     }
 
@@ -1457,14 +1716,14 @@
                             }
                         });
                         if (response.data.success) {
-                            this.showToast('success', '文件已删除');
+                            this.showToast('success', '文件已删除', '删除成功');
                             await this.loadFiles();
                         } else {
-                            this.showToast('error', '删除失败: ' + response.data.message);
+                            this.showToast('error', '删除失败: ' + response.data.message, '删除失败');
                         }
                     } catch (error) {
                         console.error('删除文件失败:', error);
-                        this.showToast('error', '删除文件失败');
+                        this.showToast('error', '删除文件失败', '删除失败');
                     }
                 },
                 renameFile(file) {
@@ -1510,14 +1769,14 @@
                         });
 
                         if (response.data.success) {
-                            this.showToast('success', '重命名成功');
+                            this.showToast('success', '重命名成功', '重命名成功');
                             await this.loadFiles();
                         } else {
-                            this.showToast('error', '重命名失败: ' + response.data.message);
+                            this.showToast('error', '重命名失败: ' + response.data.message, '重命名失败');
                         }
                     } catch (error) {
                         console.error('重命名文件失败:', error);
-                        this.showToast('error', '重命名失败: ' + (error.response?.data?.message || error.message));
+                        this.showToast('error', '重命名失败: ' + (error.response?.data?.message || error.message), '重命名失败');
                     }
                 },
                 async createFolder() {
@@ -1534,16 +1793,16 @@
                             }
                         });
                         if (response.data.success) {
-                            this.showToast('success', '文件夹已创建');
+                            this.showToast('success', '文件夹已创建', '创建成功');
                             this.showCreateFolderDialog = false;
                             this.folderName = '';
                             await this.loadFiles();
                         } else {
-                            this.showToast('error', '创建失败: ' + response.data.message);
+                            this.showToast('error', '创建失败: ' + response.data.message, '创建失败');
                         }
                     } catch (error) {
                         console.error('创建文件夹失败:', error);
-                        this.showToast('error', '创建文件夹失败');
+                        this.showToast('error', '创建文件夹失败', '创建失败');
                     }
                 },
                 getFileIcon(file) {
@@ -1603,9 +1862,15 @@
                         return '';
                     }
                 },
-                showToast(type, message) {
+                showToast(type, message, title = null) {
                     const id = this.toastId++;
-                    this.toasts.push({ id, type, message });
+                    // 根据类型自动设置默认标题
+                    if (!title) {
+                        title = type === 'success' ? '操作成功' :
+                                type === 'error' ? '操作失败' :
+                                '通知';
+                    }
+                    this.toasts.push({ id, type, message, title });
                     setTimeout(() => {
                         this.removeToast(id);
                     }, 5000);
@@ -1900,7 +2165,7 @@
                 copyPath(path) {
                     const fullPath = this.currentBucket + '/' + path;
                     navigator.clipboard.writeText(fullPath).then(() => {
-                        this.showToast('success', '路径已复制到剪贴板');
+                        this.showToast('success', '路径已复制到剪贴板', '复制成功');
                     }).catch(() => {
                         this.showToast('error', '复制失败');
                     });
@@ -1908,7 +2173,7 @@
                 },
                 copyFileName(file) {
                     navigator.clipboard.writeText(file.name).then(() => {
-                        this.showToast('success', '文件名已复制到剪贴板');
+                        this.showToast('success', '文件名已复制到剪贴板', '复制成功');
                     }).catch(() => {
                         this.showToast('error', '复制失败');
                     });
@@ -1917,7 +2182,7 @@
                 copyFilePath(file) {
                     const fullPath = this.currentBucket + '/' + file.key;
                     navigator.clipboard.writeText(fullPath).then(() => {
-                        this.showToast('success', '完整路径已复制到剪贴板');
+                        this.showToast('success', '完整路径已复制到剪贴板', '复制成功');
                     }).catch(() => {
                         this.showToast('error', '复制失败');
                     });
@@ -1949,18 +2214,18 @@
                         if (response.data.success) {
                             this.shareUrl = response.data.data.url;
                             this.shareExpiresAt = response.data.data.expiresAt;
-                            this.showToast('success', '分享链接已生成');
+                            this.showToast('success', '分享链接已生成', '生成成功');
                         } else {
-                            this.showToast('error', '生成失败: ' + response.data.message);
+                            this.showToast('error', '生成失败: ' + response.data.message, '生成失败');
                         }
                     } catch (error) {
                         console.error('生成分享链接失败:', error);
-                        this.showToast('error', '生成分享链接失败');
+                        this.showToast('error', '生成分享链接失败', '生成失败');
                     }
                 },
                 copyShareUrl() {
                     navigator.clipboard.writeText(this.shareUrl).then(() => {
-                        this.showToast('success', '链接已复制到剪贴板');
+                        this.showToast('success', '链接已复制到剪贴板', '复制成功');
                     }).catch(() => {
                         this.showToast('error', '复制失败');
                     });
@@ -2066,6 +2331,36 @@
                         console.error('计算文件夹大小失败:', error);
                         this.showToast('error', '计算文件夹大小失败');
                     }
+                },
+                // 侧边栏宽度调整
+                startResizeSidebar(event) {
+                    event.preventDefault();
+                    this.isResizingSidebar = true;
+                    this.resizeStartX = event.clientX;
+                    this.resizeStartWidth = this.sidebarWidth;
+                    document.addEventListener('mousemove', this.handleResizeSidebar);
+                    document.addEventListener('mouseup', this.stopResizeSidebar);
+                    document.body.style.userSelect = 'none';
+                    document.body.style.cursor = 'ew-resize';
+                },
+                handleResizeSidebar(event) {
+                    if (!this.isResizingSidebar) return;
+                    const deltaX = event.clientX - this.resizeStartX;
+                    let newWidth = this.resizeStartWidth + deltaX;
+                    const minWidth = 200;
+                    const maxWidth = 500;
+                    if (newWidth < minWidth) newWidth = minWidth;
+                    else if (newWidth > maxWidth) newWidth = maxWidth;
+                    this.sidebarWidth = newWidth;
+                },
+                stopResizeSidebar() {
+                    if (!this.isResizingSidebar) return;
+                    this.isResizingSidebar = false;
+                    document.removeEventListener('mousemove', this.handleResizeSidebar);
+                    document.removeEventListener('mouseup', this.stopResizeSidebar);
+                    document.body.style.userSelect = '';
+                    document.body.style.cursor = '';
+                    localStorage.setItem('sidebarWidth', this.sidebarWidth.toString());
                 },
                 // 初始化图片懒加载
                 initLazyLoading() {
@@ -2176,7 +2471,7 @@
                         );
 
                         await promise;
-                        this.showToast('success', '缓存已清除，页面将刷新');
+                        this.showToast('success', '缓存已清除，页面将刷新', '清除成功');
 
                         // 延迟刷新页面
                         setTimeout(() => {
@@ -2184,8 +2479,98 @@
                         }, 1500);
                     } catch (error) {
                         console.error('清除缓存失败:', error);
-                        this.showToast('error', '清除缓存失败: ' + error.message);
+                        this.showToast('error', '清除缓存失败: ' + error.message, '清除失败');
                     }
+                },
+                // 文件选择相关方法
+                isFileSelected(file) {
+                    return this.selectedFiles.has(file.key);
+                },
+                toggleFileSelection(file, event) {
+                    const currentIndex = this.displayFiles.findIndex(f => f.key === file.key);
+
+                    // Ctrl/Cmd 多选
+                    if (event?.ctrlKey || event?.metaKey) {
+                        if (this.selectedFiles.has(file.key)) {
+                            this.selectedFiles.delete(file.key);
+                        } else {
+                            this.selectedFiles.add(file.key);
+                        }
+                        this.lastClickedIndex = currentIndex;
+                    }
+                    // Shift 范围选择
+                    else if (event?.shiftKey && this.lastClickedIndex >= 0) {
+                        const start = Math.min(this.lastClickedIndex, currentIndex);
+                        const end = Math.max(this.lastClickedIndex, currentIndex);
+                        for (let i = start; i <= end; i++) {
+                            this.selectedFiles.add(this.displayFiles[i].key);
+                        }
+                    }
+                    // 普通单选
+                    else {
+                        if (this.selectedFiles.has(file.key)) {
+                            this.selectedFiles.delete(file.key);
+                        } else {
+                            this.selectedFiles.add(file.key);
+                        }
+                        this.lastClickedIndex = currentIndex;
+                    }
+                },
+                clearSelection() {
+                    this.selectedFiles.clear();
+                    this.lastClickedIndex = -1;
+                },
+                selectAll() {
+                    this.displayFiles.forEach(file => {
+                        this.selectedFiles.add(file.key);
+                    });
+                },
+                invertSelection() {
+                    const newSelection = new Set();
+                    this.displayFiles.forEach(file => {
+                        if (!this.selectedFiles.has(file.key)) {
+                            newSelection.add(file.key);
+                        }
+                    });
+                    this.selectedFiles = newSelection;
+                },
+                // 批量操作
+                batchDownload() {
+                    const selected = this.displayFiles.filter(f => this.selectedFiles.has(f.key));
+                    selected.forEach(file => {
+                        if (!file.isFolder) {
+                            this.downloadFile(file);
+                        }
+                    });
+                    this.showToast('success', `开始下载 ${selected.length} 个文件`, '批量下载');
+                },
+                batchDelete() {
+                    const selected = this.displayFiles.filter(f => this.selectedFiles.has(f.key));
+                    if (selected.length === 0) return;
+
+                    if (confirm(`确定要删除选中的 ${selected.length} 个文件吗？`)) {
+                        selected.forEach(async (file) => {
+                            try {
+                                await axios.delete('/api/storage/files', {
+                                    params: {
+                                        bucketName: this.currentBucket,
+                                        objectKey: file.key
+                                    }
+                                });
+                            } catch (error) {
+                                console.error('删除失败:', file.name, error);
+                            }
+                        });
+                        this.showToast('success', `已删除 ${selected.length} 个文件`, '批量删除');
+                        this.clearSelection();
+                        setTimeout(() => this.loadFiles(), 1000);
+                    }
+                },
+                batchMove() {
+                    this.showToast('info', '移动功能开发中');
+                },
+                batchCopyToBucket() {
+                    this.showToast('info', '复制功能开发中');
                 }
             }
         }).mount('#app');
