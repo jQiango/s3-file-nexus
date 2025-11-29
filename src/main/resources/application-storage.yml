@@ -30,6 +30,15 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
 
+  # 本地缓存配置（Caffeine）
+  cache:
+    type: caffeine
+    caffeine:
+      spec: initialCapacity=100,maximumSize=1000,expireAfterWrite=5m
+    cache-names:
+      - fileList        # 文件列表缓存（5分钟）
+      - folderStats     # 文件夹统计缓存（10分钟）
+
 # 存储模块配置
 storage:
   # 默认使用的存储后端（如果不使用动态配置，可以配置这里）

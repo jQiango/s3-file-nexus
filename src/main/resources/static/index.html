@@ -574,7 +574,7 @@
             </div>
 
             <!-- 刷新按钮 -->
-            <div class="p-3 border-t border-gray-200 bg-white">
+            <div class="p-3 border-t border-gray-200 bg-white space-y-2">
                 <button
                     @click="loadFiles"
                     class="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 rounded-lg font-medium transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg text-sm">
@@ -642,27 +642,6 @@
                             <span v-if="hasActiveFilters" class="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-semibold">{{ activeFilterCount }}</span>
                         </button>
 
-                        <div class="w-px h-5 bg-gray-300"></div>
-
-                        <!-- 内容筛选 -->
-                        <div class="flex items-center gap-1 bg-gray-50 rounded-lg p-0.5 border border-gray-200">
-                            <button
-                                @click="fileDisplayMode = 'folders'"
-                                :class="fileDisplayMode === 'folders' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-white'"
-                                class="flex items-center gap-1.5 px-2.5 h-8 rounded-md transition-all">
-                                <i class="bi bi-folder text-sm"></i>
-                                <span class="text-xs font-medium">文件夹</span>
-                            </button>
-                            <button
-                                @click="fileDisplayMode = 'files'"
-                                :class="fileDisplayMode === 'files' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-white'"
-                                class="flex items-center gap-1.5 px-2.5 h-8 rounded-md transition-all">
-                                <i class="bi bi-file-earmark text-sm"></i>
-                                <span class="text-xs font-medium">文件</span>
-                            </button>
-                        </div>
-
-                        <div class="w-px h-5 bg-gray-300"></div>
 
                         <!-- 批量操作 -->
                         <div class="flex items-center gap-1 bg-gray-50 rounded-lg p-0.5 border border-gray-200">
@@ -718,13 +697,17 @@
 
                         <button
                             @click="goToConfig"
-                            class="flex items-center gap-1.5 px-3 h-8 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all">
+                            class="flex items-center gap-1.5 px-3 h-8 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all"
+                            title="配置存储后端">
                             <i class="bi bi-gear-fill text-sm"></i>
+                            <span class="text-xs font-medium">配置</span>
                         </button>
                         <button
-                            @click="clearServiceWorkerCache"
-                            class="flex items-center gap-1.5 px-3 h-8 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                            @click="clearAllCaches"
+                            class="flex items-center gap-1.5 px-3 h-8 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="清除所有缓存并刷新">
                             <i class="bi bi-trash-fill text-sm"></i>
+                            <span class="text-xs font-medium">清除缓存</span>
                         </button>
                     </div>
                 </div>
@@ -1119,21 +1102,57 @@
                             <span v-if="file.isFolder" class="text-xs text-gray-400">--</span>
                         </div>
 
-                        <!-- 操作按钮（悬停显示） -->
-                        <div class="w-16 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <!-- 文件类型标签 -->
+                        <div class="w-16 flex-shrink-0 flex items-center justify-center">
+                            <span v-if="!file.isFolder"
+                                  :class="getFileTypeBadgeClass(file)"
+                                  class="px-2 py-0.5 rounded text-xs font-medium">
+                                {{ getFileTypeLabel(file) }}
+                            </span>
+                        </div>
+
+                        <!-- 文件路径（仅当路径与文件名不同时显示） -->
+                        <div v-if="shouldShowPath(file)" class="flex-1 min-w-0 px-2">
+                            <div class="text-xs text-gray-400 truncate" :title="file.key">
+                                {{ file.key }}
+                            </div>
+                        </div>
+                        <div v-else class="flex-1 min-w-0 px-2"></div>
+
+                        <!-- 快捷操作按钮（始终显示） -->
+                        <div class="flex items-center justify-end gap-1 flex-shrink-0">
                             <button
                                 v-if="!file.isFolder && canPreview(file)"
                                 @click.stop="previewFile(file)"
-                                class="p-1 hover:bg-green-50 rounded text-gray-500 hover:text-green-600 transition-colors"
+                                class="p-1.5 hover:bg-green-50 rounded text-gray-400 hover:text-green-600 transition-colors"
                                 title="预览">
-                                <i class="bi bi-eye text-base"></i>
+                                <i class="bi bi-eye text-sm"></i>
                             </button>
                             <button
                                 v-if="!file.isFolder"
                                 @click.stop="downloadFile(file)"
-                                class="p-1 hover:bg-blue-50 rounded text-gray-500 hover:text-blue-600 transition-colors"
+                                class="p-1.5 hover:bg-blue-50 rounded text-gray-400 hover:text-blue-600 transition-colors"
                                 title="下载">
-                                <i class="bi bi-download text-base"></i>
+                                <i class="bi bi-download text-sm"></i>
+                            </button>
+                            <button
+                                v-if="!file.isFolder"
+                                @click.stop="shareFile(file)"
+                                class="p-1.5 hover:bg-purple-50 rounded text-gray-400 hover:text-purple-600 transition-colors"
+                                title="分享">
+                                <i class="bi bi-share text-sm"></i>
+                            </button>
+                            <button
+                                @click.stop="renameFile(file)"
+                                class="p-1.5 hover:bg-yellow-50 rounded text-gray-400 hover:text-yellow-600 transition-colors"
+                                title="重命名">
+                                <i class="bi bi-pencil text-sm"></i>
+                            </button>
+                            <button
+                                @click.stop="deleteFile(file)"
+                                class="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600 transition-colors"
+                                title="删除">
+                                <i class="bi bi-trash text-sm"></i>
                             </button>
                         </div>
                     </div>
@@ -1194,36 +1213,7 @@
                     </div>
                 </div>
 
-                <!-- 文件夹模式统计信息 -->
-                <div v-if="!loading && fileDisplayMode === 'folders' && foldersCount > 0" class="mt-8 pt-6 border-t border-gray-200">
-                    <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
-                        <i class="bi bi-folder-fill text-blue-600"></i>
-                        <span class="font-medium">共 {{ foldersCount }} 个文件夹</span>
-                    </div>
-                </div>
-
-                <!-- 分页 - 后端懒加载（仅在"仅文件"模式下显示） -->
-                <div v-if="!loading && fileDisplayMode === 'files' && (currentPage > 1 || hasMorePages)" class="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-                    <div class="text-sm font-medium text-gray-700">
-                        第 {{ currentPage }} 页，显示 {{ filesCount }} 个文件
-                        <span v-if="hasMorePages" class="text-gray-500">（还有更多）</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button @click="goToFirstPage" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
-                            <i class="bi bi-chevron-bar-left"></i>
-                        </button>
-                        <button @click="goToPrevPage" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-                        <span class="px-4 py-1.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                            第 {{ currentPage }} 页
-                            <span v-if="!hasMorePages">（最后一页）</span>
-                        </span>
-                        <button @click="goToNextPage" :disabled="!hasMorePages" class="px-3 py-1.5 rounded-lg bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200 hover:border-blue-300 hover:shadow-sm">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
+                <!-- v2 API使用无限滚动，无需分页按钮 -->
             </div>
         </main>
 
@@ -2404,6 +2394,9 @@
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"
             onerror="this.onerror=null;this.src='https://unpkg.com/axios@1.6.7/dist/axios.min.js'"></script>
 
+    <!-- Optimized Loader - v2 API优化加载器 -->
+    <script src="/js/optimized-loader.js"></script>
+
     <script>
         const { createApp } = Vue;
 
@@ -2411,7 +2404,6 @@
             data() {
                 return {
                     viewMode: 'grid', // 'list' 或 'grid'
-                    fileDisplayMode: 'folders', // 'folders' | 'files' - 文件显示模式（默认显示文件夹）
                     buckets: [],
                     currentBucket: '',
                     currentPath: '',
@@ -2559,7 +2551,12 @@
                         currentFile: '',
                         succeeded: 0,
                         failed: 0
-                    }
+                    },
+                    // V2 API 优化相关（来自OptimizedLoader）
+                    allItems: [],              // 所有已加载的项目（用于无限滚动）
+                    loadingMore: false,       // 是否正在加载更多
+                    hasMore: true,            // 是否还有更多数据
+                    useV2API: true            // 使用v2 API
                 }
             },
             computed: {
@@ -2611,13 +2608,8 @@
                     return this.filteredFiles;
                 },
                 displayFiles() {
-                    // 根据文件显示模式筛选（只有两种模式：folders 或 files）
-                    if (this.fileDisplayMode === 'folders') {
-                        return this.files.filter(f => f.isFolder);
-                    } else {
-                        // fileDisplayMode === 'files'
-                        return this.files.filter(f => !f.isFolder);
-                    }
+                    // v2 API混合返回所有项目（文件夹已排在前面），直接显示
+                    return this.files;
                 },
                 foldersCount() {
                     return this.cachedFolders.length;
@@ -2669,6 +2661,12 @@
             },
             mounted() {
                 this.checkConfigAndLoad();
+
+                // 初始化V2 API优化功能
+                if (this.useV2API) {
+                    this.initV2API();
+                }
+
                 // 点击其他地方隐藏右键菜单
                 document.addEventListener('click', () => {
                     this.contextMenu.show = false;
@@ -3039,6 +3037,332 @@
                     }
                     return '';
                 },
+
+                // ==================== V2 API 优化方法（来自OptimizedLoader）====================
+                /**
+                 * 加载文件列表（优化版 - v2 API）
+                 * @param {boolean} reset - 是否重置列表
+                 */
+                async loadFilesV2(reset = true, bypassCache = false) {
+                    if (!this.currentBucket) {
+                        console.warn('未选择bucket');
+                        return;
+                    }
+
+                    // 重置加载
+                    if (reset) {
+                        this.allItems = [];
+                        this.continuationToken = null;
+                        this.hasMore = true;
+                    }
+
+                    // 防止重复加载
+                    if (this.loading || this.loadingMore || !this.hasMore) {
+                        return;
+                    }
+
+                    const isInitialLoad = this.allItems.length === 0;
+                    if (isInitialLoad) {
+                        this.loading = true;
+                    } else {
+                        this.loadingMore = true;
+                    }
+
+                    try {
+                        // 构建请求参数
+                        const params = new URLSearchParams({
+                            bucket: this.currentBucket,
+                            prefix: this.currentPath || '',
+                            pageSize: 100
+                        });
+
+                        if (this.continuationToken) {
+                            params.append('continuationToken', this.continuationToken);
+                        }
+
+                        // 添加时间戳绕过缓存（用于上传/删除后刷新）
+                        if (bypassCache) {
+                            params.append('_t', Date.now());
+                        }
+
+                        console.log(`🔄 加载文件: ${this.currentPath || '/'} (reset=${reset}, token=${this.continuationToken ? 'yes' : 'no'}, bypassCache=${bypassCache})`);
+
+                        const response = await axios.get(`/api/storage/v2/list?${params}`);
+
+                        if (response.data.success) {
+                            const data = response.data.data;
+
+                            // 显示缓存来源
+                            const cacheMsg = data.fromCache ? '✅ Caffeine缓存' : '💾 S3';
+                            console.log(`来自: ${cacheMsg}`);
+
+                            // 追加新数据
+                            const newItems = data.items || [];
+                            this.allItems.push(...newItems);
+                            console.log(`✅ 加载了 ${newItems.length} 项，总计 ${this.allItems.length} 项`);
+
+                            // 更新分页状态
+                            this.continuationToken = data.nextContinuationToken;
+                            this.hasMore = data.isTruncated || false;
+
+                            if (this.hasMore) {
+                                console.log('📄 还有更多数据');
+                            } else {
+                                console.log('✔️ 已加载全部数据');
+                            }
+
+                            // 更新显示
+                            this.updateDisplayFiles();
+
+                        } else {
+                            console.error('❌ API返回错误:', response.data.message);
+                            this.showToast('error', response.data.message || '加载失败');
+                        }
+
+                    } catch (error) {
+                        console.error('❌ 加载失败:', error);
+                        this.handleConfigError({ message: error.message });
+                        this.showToast('error', '无法加载文件列表: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                        this.loadingMore = false;
+                    }
+                },
+
+                /**
+                 * 更新显示的文件列表
+                 */
+                updateDisplayFiles() {
+                    // 转换为旧格式（兼容现有filteredFiles计算属性）
+                    this.files = this.allItems.map(item => {
+                        const isFolder = item.type === 'folder' || item.folder === true;
+                        return {
+                            key: item.key,
+                            name: item.name,
+                            size: item.size || 0,
+                            lastModified: item.lastModified,
+                            isFolder: isFolder,
+                            folderStats: item.folderStats,
+                            // 保留原有字段
+                            storageClass: item.storageClass
+                        };
+                    });
+
+                    this.totalFiles = this.files.length;
+                    const folderCount = this.files.filter(f => f.isFolder).length;
+                    const fileCount = this.files.filter(f => !f.isFolder).length;
+                    console.log(`📊 显示 ${this.files.length} 项 (📁${folderCount} 文件夹 + 📄${fileCount} 文件)`);
+                },
+
+                /**
+                 * 导航到指定路径（v2版本）
+                 */
+                navigateToPathV2(path) {
+                    console.log(`🧭 导航到: ${path || '/'}`);
+                    this.currentPath = path;
+                    this.loadFilesV2(true); // 重置并重新加载
+                },
+
+                /**
+                 * 设置无限滚动
+                 */
+                setupInfiniteScrollV2() {
+                    // 主文件列表容器：<div class="flex-1 overflow-y-auto scrollbar-thin p-8">
+                    // 需要在$nextTick后查找，确保DOM已渲染
+                    this.$nextTick(() => {
+                        // 查找主内容区的滚动容器
+                        const allScrollContainers = document.querySelectorAll('.overflow-y-auto');
+
+                        // 找到包含文件列表的那个（通常是最大的，包含p-8类）
+                        let container = null;
+                        for (const el of allScrollContainers) {
+                            if (el.classList.contains('p-8') || el.classList.contains('scrollbar-thin')) {
+                                // 检查是否包含文件列表元素
+                                if (el.querySelector('[v-for]') || el.textContent.includes('加载中') || el.textContent.includes('未找到文件')) {
+                                    container = el;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!container) {
+                            console.warn('⚠️ 找不到文件列表容器，无限滚动未启用');
+                            console.log('提示：查找的容器应包含 overflow-y-auto 和 p-8 类');
+                            return;
+                        }
+
+                        console.log('✅ 无限滚动已启用，容器:', container.className);
+
+                        // 节流滚动事件
+                        let scrollTimeout = null;
+                        let lastScrollTop = 0;
+
+                        const scrollHandler = () => {
+                            if (scrollTimeout) clearTimeout(scrollTimeout);
+
+                            scrollTimeout = setTimeout(() => {
+                                const { scrollTop, scrollHeight, clientHeight } = container;
+
+                                // 只在向下滚动时触发
+                                if (scrollTop < lastScrollTop) {
+                                    lastScrollTop = scrollTop;
+                                    return;
+                                }
+                                lastScrollTop = scrollTop;
+
+                                const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+                                // 距离底部300px时触发加载
+                                if (distanceToBottom < 300 && this.hasMore && !this.loadingMore && !this.loading) {
+                                    console.log('🔻 触发无限滚动加载 (距底部 ' + Math.round(distanceToBottom) + 'px)');
+                                    this.loadFilesV2(false); // false = 不重置，追加加载
+                                }
+                            }, 150);
+                        };
+
+                        container.addEventListener('scroll', scrollHandler);
+                        console.log('👂 监听滚动事件');
+
+                        // 保存清理函数引用
+                        this._scrollCleanup = () => {
+                            container.removeEventListener('scroll', scrollHandler);
+                            console.log('🔇 移除滚动监听');
+                        };
+                    });
+                },
+
+                /**
+                 * 切换bucket（v2版本）
+                 */
+                async selectBucketV2(bucket) {
+                    console.log(`🪣 切换bucket: ${bucket}`);
+                    this.currentBucket = bucket;
+                    localStorage.setItem('currentBucket', bucket);
+                    this.currentPath = '';
+
+                    // 重置所有筛选条件
+                    this.filters.fileType = '';
+                    this.filters.startDate = '';
+                    this.filters.endDate = '';
+                    this.searchKeyword = '';
+                    this.showAdvancedFilters = false;
+
+                    // 重置日历状态
+                    const today = new Date();
+                    this.startCalendarYear = today.getFullYear();
+                    this.startCalendarMonth = today.getMonth() + 1;
+                    this.endCalendarYear = today.getFullYear();
+                    this.endCalendarMonth = today.getMonth() + 1;
+
+                    await this.loadFilesV2(true);
+                },
+
+                /**
+                 * 刷新当前目录（v2版本）
+                 */
+                async refreshV2() {
+                    console.log('🔄 刷新当前目录');
+                    await this.loadFilesV2(true);
+                },
+
+                /**
+                 * 清除缓存并刷新（用于上传/删除后）
+                 */
+                async clearCacheAndRefresh() {
+                    try {
+                        // 调用后端清除缓存接口
+                        await axios.delete('/api/storage/v2/cache');
+                        console.log('🗑️ 缓存已清除');
+                        // 等待100ms确保缓存清除完成
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } catch (error) {
+                        console.warn('清除缓存失败:', error);
+                    }
+                    // 强制刷新列表（重置状态并绕过缓存）
+                    this.allItems = [];
+                    this.continuationToken = null;
+                    this.hasMore = true;
+                    await this.loadFilesV2(true, true);  // 第二个参数true表示绕过缓存
+                },
+
+                /**
+                 * 清除所有缓存并刷新
+                 */
+                async clearAllCaches() {
+                    try {
+                        this.showToast('info', '正在清除缓存...', '清除缓存');
+
+                        // 1. 清除后端Caffeine缓存
+                        try {
+                            await axios.delete('/api/storage/v2/cache');
+                            console.log('✅ 后端缓存已清除');
+                        } catch (error) {
+                            console.warn('清除后端缓存失败:', error);
+                        }
+
+                        // 2. 清除Service Worker浏览器缓存
+                        if ('serviceWorker' in navigator) {
+                            try {
+                                const registration = await navigator.serviceWorker.ready;
+                                const messageChannel = new MessageChannel();
+
+                                const swPromise = new Promise((resolve, reject) => {
+                                    messageChannel.port1.onmessage = (event) => {
+                                        if (event.data.success) {
+                                            resolve();
+                                        } else {
+                                            reject(new Error('清除失败'));
+                                        }
+                                    };
+                                    setTimeout(() => reject(new Error('超时')), 3000);
+                                });
+
+                                registration.active.postMessage({
+                                    type: 'CLEAR_CACHE'
+                                }, [messageChannel.port2]);
+
+                                await swPromise;
+                                console.log('✅ 浏览器缓存已清除');
+                            } catch (error) {
+                                console.warn('清除浏览器缓存失败:', error);
+                            }
+                        }
+
+                        // 3. 等待缓存清除完成
+                        await new Promise(resolve => setTimeout(resolve, 100));
+
+                        // 4. 刷新列表
+                        this.allItems = [];
+                        this.continuationToken = null;
+                        this.hasMore = true;
+                        await this.loadFilesV2(true, true);  // 绕过缓存
+
+                        this.showToast('success', '缓存已清除，列表已刷新', '清除成功');
+                    } catch (error) {
+                        console.error('清除缓存失败:', error);
+                        this.showToast('error', '清除缓存失败: ' + error.message, '清除失败');
+                    }
+                },
+
+                /**
+                 * 初始化V2 API
+                 */
+                initV2API() {
+                    console.log('🚀 初始化优化API (v2)');
+
+                    // 替换方法
+                    this.loadFiles = this.loadFilesV2;
+                    this.navigateToPath = this.navigateToPathV2;
+                    this.selectBucket = this.selectBucketV2;
+                    this.refresh = this.refreshV2;
+
+                    // 设置无限滚动（内部已有$nextTick）
+                    this.setupInfiniteScrollV2();
+
+                    console.log('✅ V2 API 初始化完成');
+                },
+                // ==================== V2 API 优化方法结束 ====================
+
                 // 分页导航方法
                 async goToFirstPage() {
                     if (this.currentPage === 1) return;
@@ -3155,7 +3479,13 @@
 
                     this.uploadFiles = [];
                     this.uploadFilesList = [];
-                    await this.loadFiles();
+
+                    // 清除缓存并刷新列表
+                    if (this.useV2API) {
+                        await this.clearCacheAndRefresh();
+                    } else {
+                        await this.loadFiles();
+                    }
 
                     // 3秒后自动关闭队列窗口
                     setTimeout(() => {
@@ -3198,7 +3528,12 @@
                         });
                         if (response.data.success) {
                             this.showToast('success', '文件已删除', '删除成功');
-                            await this.loadFiles();
+                            // 清除缓存并刷新列表
+                            if (this.useV2API) {
+                                await this.clearCacheAndRefresh();
+                            } else {
+                                await this.loadFiles();
+                            }
                         } else {
                             this.showToast('error', '删除失败: ' + response.data.message, '删除失败');
                         }
@@ -3251,7 +3586,12 @@
 
                         if (response.data.success) {
                             this.showToast('success', '重命名成功', '重命名成功');
-                            await this.loadFiles();
+                            // 清除缓存并刷新列表
+                            if (this.useV2API) {
+                                await this.clearCacheAndRefresh();
+                            } else {
+                                await this.loadFiles();
+                            }
                         } else {
                             this.showToast('error', '重命名失败: ' + response.data.message, '重命名失败');
                         }
@@ -3277,7 +3617,12 @@
                             this.showToast('success', '文件夹已创建', '创建成功');
                             this.showCreateFolderDialog = false;
                             this.folderName = '';
-                            await this.loadFiles();
+                            // 清除缓存并刷新列表
+                            if (this.useV2API) {
+                                await this.clearCacheAndRefresh();
+                            } else {
+                                await this.loadFiles();
+                            }
                         } else {
                             this.showToast('error', '创建失败: ' + response.data.message, '创建失败');
                         }
@@ -3321,6 +3666,77 @@
                         'mp3': 'text-pink-500'
                     };
                     return colorMap[ext] || 'text-gray-500';
+                },
+                getFileTypeLabel(file) {
+                    if (file.isFolder) {
+                        return '';
+                    }
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const typeMap = {
+                        'png': '图片', 'jpg': '图片', 'jpeg': '图片', 'gif': '图片', 'svg': '图片', 'bmp': '图片', 'webp': '图片',
+                        'pdf': 'PDF',
+                        'doc': '文档', 'docx': '文档', 'txt': '文本', 'md': '文本',
+                        'xls': '表格', 'xlsx': '表格', 'csv': '表格',
+                        'ppt': '演示', 'pptx': '演示',
+                        'zip': '压缩包', 'rar': '压缩包', '7z': '压缩包', 'tar': '压缩包', 'gz': '压缩包',
+                        'mp4': '视频', 'avi': '视频', 'mov': '视频', 'wmv': '视频', 'flv': '视频', 'mkv': '视频',
+                        'mp3': '音频', 'wav': '音频', 'flac': '音频', 'aac': '音频',
+                        'js': '代码', 'ts': '代码', 'html': '代码', 'css': '代码', 'json': '代码', 'xml': '代码', 'java': '代码', 'py': '代码'
+                    };
+                    return typeMap[ext] || '文件';
+                },
+                getFileTypeBadgeClass(file) {
+                    if (file.isFolder) {
+                        return '';
+                    }
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const classMap = {
+                        'png': 'bg-green-100 text-green-700',
+                        'jpg': 'bg-green-100 text-green-700',
+                        'jpeg': 'bg-green-100 text-green-700',
+                        'gif': 'bg-green-100 text-green-700',
+                        'svg': 'bg-green-100 text-green-700',
+                        'bmp': 'bg-green-100 text-green-700',
+                        'webp': 'bg-green-100 text-green-700',
+                        'pdf': 'bg-red-100 text-red-700',
+                        'doc': 'bg-blue-100 text-blue-700',
+                        'docx': 'bg-blue-100 text-blue-700',
+                        'txt': 'bg-gray-100 text-gray-700',
+                        'md': 'bg-gray-100 text-gray-700',
+                        'xls': 'bg-emerald-100 text-emerald-700',
+                        'xlsx': 'bg-emerald-100 text-emerald-700',
+                        'csv': 'bg-emerald-100 text-emerald-700',
+                        'ppt': 'bg-orange-100 text-orange-700',
+                        'pptx': 'bg-orange-100 text-orange-700',
+                        'zip': 'bg-yellow-100 text-yellow-700',
+                        'rar': 'bg-yellow-100 text-yellow-700',
+                        '7z': 'bg-yellow-100 text-yellow-700',
+                        'tar': 'bg-yellow-100 text-yellow-700',
+                        'gz': 'bg-yellow-100 text-yellow-700',
+                        'mp4': 'bg-purple-100 text-purple-700',
+                        'avi': 'bg-purple-100 text-purple-700',
+                        'mov': 'bg-purple-100 text-purple-700',
+                        'wmv': 'bg-purple-100 text-purple-700',
+                        'flv': 'bg-purple-100 text-purple-700',
+                        'mkv': 'bg-purple-100 text-purple-700',
+                        'mp3': 'bg-pink-100 text-pink-700',
+                        'wav': 'bg-pink-100 text-pink-700',
+                        'flac': 'bg-pink-100 text-pink-700',
+                        'aac': 'bg-pink-100 text-pink-700',
+                        'js': 'bg-indigo-100 text-indigo-700',
+                        'ts': 'bg-indigo-100 text-indigo-700',
+                        'html': 'bg-indigo-100 text-indigo-700',
+                        'css': 'bg-indigo-100 text-indigo-700',
+                        'json': 'bg-indigo-100 text-indigo-700',
+                        'xml': 'bg-indigo-100 text-indigo-700',
+                        'java': 'bg-indigo-100 text-indigo-700',
+                        'py': 'bg-indigo-100 text-indigo-700'
+                    };
+                    return classMap[ext] || 'bg-gray-100 text-gray-600';
+                },
+                shouldShowPath(file) {
+                    // 如果在根目录，不显示路径
+                    return this.currentPath !== '' && this.currentPath !== '/';
                 },
                 formatFileSize(bytes) {
                     if (bytes === 0) return '0 B';
@@ -4287,7 +4703,12 @@
                     }
 
                     this.clearSelection();
-                    setTimeout(() => this.loadFiles(), 500);
+                    // 清除缓存并刷新列表
+                    if (this.useV2API) {
+                        await this.clearCacheAndRefresh();
+                    } else {
+                        setTimeout(() => this.loadFiles(), 500);
+                    }
                 },
                 // 批量移动功能
                 async batchMove() {
@@ -4458,7 +4879,12 @@
                         }
 
                         this.clearSelection();
-                        this.loadFiles();
+                        // 清除缓存并刷新列表
+                        if (this.useV2API) {
+                            this.clearCacheAndRefresh();
+                        } else {
+                            this.loadFiles();
+                        }
                     }, 1000);
                 },
                 // 批量复制到其他Bucket功能
