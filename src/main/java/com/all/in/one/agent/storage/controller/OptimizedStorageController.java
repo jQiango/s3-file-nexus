@@ -15,7 +15,6 @@ import software.amazon.awssdk.services.s3.model.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -152,24 +151,12 @@ public class OptimizedStorageController {
             log.info("S3响应 - bucket: {}, prefix: '{}', CommonPrefixes: {}, Contents: {}",
                     bucket, prefix, response.commonPrefixes().size(), response.contents().size());
 
-            // 添加文件夹（CommonPrefixes）
+            // 添加文件夹（CommonPrefixes）- 不计算统计信息以提升性能
             for (CommonPrefix commonPrefix : response.commonPrefixes()) {
-                // 异步计算文件夹统计信息（不阻塞主流程）
-                FolderStats stats = FolderStats.builder()
-                        .calculating(true)
-                        .build();
-
-                // 启动异步任务计算统计信息
                 String folderPrefix = commonPrefix.prefix();
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        calculateFolderStats(backendKey, bucket, folderPrefix);
-                    } catch (Exception e) {
-                        log.warn("计算文件夹统计信息失败: {}", folderPrefix, e);
-                    }
-                });
 
-                items.add(FileItem.folder(folderPrefix, stats));
+                // 不计算统计信息，直接添加文件夹（性能优化）
+                items.add(FileItem.folder(folderPrefix, null));
             }
 
             // 添加文件
@@ -252,16 +239,15 @@ public class OptimizedStorageController {
     }
 
     /**
-     * 智能排序：文件夹优先，然后按时间倒序（最新的在前）
+     * 智能排序：文件夹优先，然后按名称排序
      */
     private List<FileItem> sortItems(List<FileItem> items) {
         return items.stream()
                 .sorted(Comparator
-                        // 1. 文件夹优先
+                        // 1. 文件夹优先（true > false，所以文件夹排在前面）
                         .comparing(FileItem::isFolder, Comparator.reverseOrder())
-                        // 2. 按最后修改时间倒序（最新的在前，null值放最后）
-                        .thenComparing(FileItem::getLastModified,
-                                Comparator.nullsLast(Comparator.reverseOrder())))
+                        // 2. 按名称排序（忽略大小写）
+                        .thenComparing(item -> item.getName().toLowerCase()))
                 .collect(Collectors.toList());
     }
 

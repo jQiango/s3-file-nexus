@@ -463,16 +463,86 @@ public class StorageServiceImpl implements StorageService {
             S3Client s3Client = s3ClientUtil.createS3Client(backend);
             String actualBucketName = bucketName != null ? bucketName : backend.getDefaultBucket();
 
-            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(actualBucketName)
-                    .key(objectKey)
-                    .build();
+            // 如果是文件夹（以/结尾），需要递归删除所有子文件
+            if (objectKey.endsWith("/")) {
+                deleteFolderRecursively(s3Client, actualBucketName, objectKey);
+            } else {
+                // 普通文件直接删除
+                DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                        .bucket(actualBucketName)
+                        .key(objectKey)
+                        .build();
 
-            s3Client.deleteObject(deleteObjectRequest);
+                s3Client.deleteObject(deleteObjectRequest);
+            }
 
         } catch (Exception e) {
             log.error("文件删除失败 - backend: {}, bucket: {}, key: {}", backendName, bucketName, objectKey, e);
             throw new RuntimeException("文件删除失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 递归删除文件夹及其所有内容
+     */
+    private void deleteFolderRecursively(S3Client s3Client, String bucketName, String prefix) {
+        try {
+            log.info("开始递归删除文件夹: bucket={}, prefix={}", bucketName, prefix);
+
+            // 列出所有子对象（不使用delimiter，获取所有递归内容）
+            software.amazon.awssdk.services.s3.model.ListObjectsV2Request listRequest =
+                software.amazon.awssdk.services.s3.model.ListObjectsV2Request.builder()
+                    .bucket(bucketName)
+                    .prefix(prefix)
+                    .build();
+
+            software.amazon.awssdk.services.s3.model.ListObjectsV2Response listResponse;
+            int totalDeleted = 0;
+
+            do {
+                listResponse = s3Client.listObjectsV2(listRequest);
+                log.info("列出对象: 找到 {} 个对象", listResponse.contents().size());
+
+                if (!listResponse.contents().isEmpty()) {
+                    // 逐个删除，避免批量删除的URI问题
+                    for (software.amazon.awssdk.services.s3.model.S3Object s3Object : listResponse.contents()) {
+                        try {
+                            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                                    .bucket(bucketName)
+                                    .key(s3Object.key())
+                                    .build();
+
+                            s3Client.deleteObject(deleteRequest);
+                            totalDeleted++;
+
+                            if (totalDeleted % 10 == 0) {
+                                log.info("已删除 {} 个对象", totalDeleted);
+                            }
+                        } catch (Exception e) {
+                            log.error("删除对象失败: {}", s3Object.key(), e);
+                            // 继续删除其他文件
+                        }
+                    }
+                }
+
+                // 如果还有更多对象，继续删除
+                if (listResponse.isTruncated()) {
+                    listRequest = listRequest.toBuilder()
+                        .continuationToken(listResponse.nextContinuationToken())
+                        .build();
+                }
+            } while (listResponse.isTruncated());
+
+            log.info("文件夹删除完成，共删除 {} 个对象: {}", totalDeleted, prefix);
+
+            // 如果一个对象都没删除，说明文件夹可能是空的或不存在
+            if (totalDeleted == 0) {
+                log.warn("文件夹为空或不存在: {}", prefix);
+            }
+
+        } catch (Exception e) {
+            log.error("递归删除文件夹失败 - bucket: {}, prefix: {}", bucketName, prefix, e);
+            throw new RuntimeException("递归删除文件夹失败: " + e.getMessage());
         }
     }
 

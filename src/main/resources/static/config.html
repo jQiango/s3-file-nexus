@@ -233,11 +233,11 @@
         <div class="max-w-xl mx-auto">
             <!-- Logo和标题 -->
             <div class="text-center mb-8 animate-fade-in">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mb-4">
-                    <i class="bi bi-cloud-fill text-white text-3xl"></i>
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mb-4">
+                    <i class="bi bi-cloud-fill text-white text-4xl"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">S3 文件管理器</h1>
-                <p class="text-sm text-gray-600">配置您的对象存储连接</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-2">S3 文件管理器</h1>
+                <p class="text-base text-gray-600">配置您的对象存储连接</p>
             </div>
 
             <!-- Toast 通知 -->
@@ -247,33 +247,33 @@
                      'bg-green-50 border-green-200': alert.type === 'success',
                      'bg-red-50 border-red-200': alert.type === 'error'
                  }">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
                      :class="{
                          'bg-green-100': alert.type === 'success',
                          'bg-red-100': alert.type === 'error'
                      }">
-                    <i class="text-lg"
+                    <i class="text-xl"
                        :class="{
                            'bi bi-check-circle text-green-600': alert.type === 'success',
                            'bi bi-x-circle text-red-600': alert.type === 'error'
                        }"></i>
                 </div>
                 <div class="flex-1">
-                    <h4 class="font-semibold text-sm mb-1"
+                    <h4 class="font-semibold text-base mb-1"
                         :class="{
                             'text-green-900': alert.type === 'success',
                             'text-red-900': alert.type === 'error'
                         }">
                         {{ alert.type === 'success' ? '操作成功' : '操作失败' }}
                     </h4>
-                    <p class="text-sm"
+                    <p class="text-base"
                        :class="{
                            'text-green-800': alert.type === 'success',
                            'text-red-800': alert.type === 'error'
                        }">{{ alert.message }}</p>
                 </div>
-                <button @click="alert.show = false" class="text-gray-500 hover:text-gray-700">
-                    <i class="bi bi-x-lg text-sm"></i>
+                <button @click="alert.show = false" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
+                    <i class="bi bi-x-lg text-base"></i>
                 </button>
             </div>
 
@@ -282,40 +282,40 @@
                 <form @submit.prevent="saveConfig">
                     <!-- Endpoint -->
                     <div class="mb-5">
-                        <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                            <i class="bi bi-link-45deg text-blue-600 text-base"></i>
+                        <label class="flex items-center gap-2 text-base font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-link-45deg text-blue-600 text-xl"></i>
                             服务端点 (Endpoint) <span class="text-red-500">*</span>
                         </label>
                         <input
                             v-model="config.endpoint"
                             type="text"
                             placeholder="https://s3.amazonaws.com"
-                            class="w-full h-11 px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            class="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-base text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                             required>
-                        <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-                            <i class="bi bi-info-circle"></i>
+                        <p class="text-sm text-gray-500 mt-2 flex items-center gap-1.5">
+                            <i class="bi bi-info-circle text-base"></i>
                             示例: http://minio:9000
                         </p>
                     </div>
 
                     <!-- Access Key -->
                     <div class="mb-5">
-                        <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                            <i class="bi bi-key-fill text-blue-600 text-base"></i>
+                        <label class="flex items-center gap-2 text-base font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-key-fill text-blue-600 text-xl"></i>
                             Access Key ID <span class="text-red-500">*</span>
                         </label>
                         <input
                             v-model="config.accessKey"
                             type="text"
                             placeholder="输入您的 Access Key ID"
-                            class="w-full h-11 px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono transition-all"
+                            class="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-base text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono transition-all"
                             required>
                     </div>
 
                     <!-- Secret Key -->
                     <div class="mb-5">
-                        <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                            <i class="bi bi-shield-lock-fill text-blue-600 text-base"></i>
+                        <label class="flex items-center gap-2 text-base font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-shield-lock-fill text-blue-600 text-xl"></i>
                             Secret Access Key <span class="text-red-500">*</span>
                         </label>
                         <div class="relative">
@@ -323,13 +323,13 @@
                                 v-model="config.secretKey"
                                 :type="showSecret ? 'text' : 'password'"
                                 placeholder="输入您的 Secret Access Key"
-                                class="w-full h-11 px-4 pr-12 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono transition-all"
+                                class="w-full h-12 px-4 pr-12 bg-white border border-gray-200 rounded-lg text-base text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono transition-all"
                                 required>
                             <button
                                 type="button"
                                 @click="showSecret = !showSecret"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
-                                <i :class="showSecret ? 'bi-eye-slash' : 'bi-eye'" class="text-sm"></i>
+                                class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
+                                <i :class="showSecret ? 'bi-eye-slash' : 'bi-eye'" class="text-base"></i>
                             </button>
                         </div>
                     </div>
@@ -338,28 +338,28 @@
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <!-- Region -->
                         <div>
-                            <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                                <i class="bi bi-globe2 text-blue-600 text-base"></i>
+                            <label class="flex items-center gap-2 text-base font-semibold text-gray-700 mb-2">
+                                <i class="bi bi-globe2 text-blue-600 text-xl"></i>
                                 区域
                             </label>
                             <input
                                 v-model="config.region"
                                 type="text"
                                 placeholder="ap-beijing"
-                                class="w-full h-11 px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                                class="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-base text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
                         </div>
 
                         <!-- Default Bucket -->
                         <div>
-                            <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                                <i class="bi bi-database text-blue-600 text-base"></i>
+                            <label class="flex items-center gap-2 text-base font-semibold text-gray-700 mb-2">
+                                <i class="bi bi-database text-blue-600 text-xl"></i>
                                 存储桶
                             </label>
                             <input
                                 v-model="config.bucket"
                                 type="text"
                                 placeholder="my-bucket"
-                                class="w-full h-11 px-4 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                                class="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-base text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
                         </div>
                     </div>
 
@@ -369,15 +369,15 @@
                             type="button"
                             @click="testConnection"
                             :disabled="testing"
-                            class="flex-1 h-11 flex items-center justify-center gap-2 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                            <i :class="testing ? 'bi-arrow-clockwise animate-spin' : 'bi-wifi'" class="text-base"></i>
+                            class="flex-1 h-12 flex items-center justify-center gap-2 px-5 bg-gray-100 text-gray-700 rounded-lg text-base font-medium hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                            <i :class="testing ? 'bi-arrow-clockwise animate-spin' : 'bi-wifi'" class="text-lg"></i>
                             <span>{{ testing ? '测试中...' : '测试连接' }}</span>
                         </button>
                         <button
                             type="submit"
                             :disabled="saving"
-                            class="flex-1 h-11 flex items-center justify-center gap-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-blue-800 shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                            <i :class="saving ? 'bi-arrow-clockwise animate-spin' : 'bi-check-circle'" class="text-base"></i>
+                            class="flex-1 h-12 flex items-center justify-center gap-2 px-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-base font-medium hover:from-blue-700 hover:to-blue-800 shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                            <i :class="saving ? 'bi-arrow-clockwise animate-spin' : 'bi-check-circle'" class="text-lg"></i>
                             <span>{{ saving ? '保存中...' : '保存并进入' }}</span>
                         </button>
                     </div>
@@ -387,36 +387,36 @@
             <!-- 历史配置 -->
             <div v-if="savedConfigs.length > 0" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5 mb-6 animate-slide-up">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
-                        <i class="bi bi-clock-history text-blue-600 text-base"></i>
+                    <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <i class="bi bi-clock-history text-blue-600 text-xl"></i>
                         最近使用的配置
                     </h3>
-                    <span class="text-xs font-medium text-gray-500 px-2.5 py-1 bg-gray-100 rounded-full">{{ savedConfigs.length }}</span>
+                    <span class="text-sm font-medium text-gray-500 px-3 py-1.5 bg-gray-100 rounded-full">{{ savedConfigs.length }}</span>
                 </div>
 
                 <div class="space-y-3">
                     <div
                         v-for="(item, index) in savedConfigs"
                         :key="index"
-                        class="history-card flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-xl hover:border-blue-300 cursor-pointer group bg-white hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent">
-                        <div class="flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-                            <i class="bi bi-server text-white text-base"></i>
+                        class="history-card flex items-center gap-3 px-4 py-3.5 border border-gray-200 rounded-xl hover:border-blue-300 cursor-pointer group bg-white hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                            <i class="bi bi-server text-white text-xl"></i>
                         </div>
                         <div class="flex-1 min-w-0" @click="useConfig(index)">
-                            <div class="font-semibold text-sm text-gray-900 truncate">{{ item.name }}</div>
-                            <div class="text-xs text-gray-500 truncate">{{ item.endpoint }}</div>
+                            <div class="font-semibold text-base text-gray-900 truncate">{{ item.name }}</div>
+                            <div class="text-sm text-gray-500 truncate">{{ item.endpoint }}</div>
                         </div>
                         <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                             <button
                                 @click.stop="useConfig(index)"
-                                class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md flex items-center gap-1.5">
-                                <i class="bi bi-box-arrow-in-right text-xs"></i>
+                                class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md flex items-center gap-2">
+                                <i class="bi bi-box-arrow-in-right text-sm"></i>
                                 <span>使用</span>
                             </button>
                             <button
                                 @click.stop="deleteConfig(index)"
-                                class="px-2.5 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-medium rounded-lg hover:from-red-700 hover:to-red-800 shadow-md">
-                                <i class="bi bi-trash text-xs"></i>
+                                class="px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-lg hover:from-red-700 hover:to-red-800 shadow-md">
+                                <i class="bi bi-trash text-sm"></i>
                             </button>
                         </div>
                     </div>
@@ -424,8 +424,8 @@
             </div>
 
             <!-- 安全提示 -->
-            <div class="flex items-start gap-2 justify-center text-sm text-gray-500 animate-fade-in">
-                <i class="bi bi-shield-check mt-0.5 text-base"></i>
+            <div class="flex items-start gap-2 justify-center text-base text-gray-500 animate-fade-in">
+                <i class="bi bi-shield-check mt-0.5 text-xl"></i>
                 <p>配置信息仅保存在本地浏览器中，不会上传到服务器。请妥善保管您的密钥信息。</p>
             </div>
         </div>
@@ -434,40 +434,40 @@
         <div v-if="showDeleteDialog" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" @click.self="showDeleteDialog = false">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-slide-up mx-3">
                 <!-- 标题栏 -->
-                <div class="flex items-center justify-between p-4">
+                <div class="flex items-center justify-between p-5">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30">
-                            <i class="bi bi-exclamation-triangle text-white text-xl"></i>
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30">
+                            <i class="bi bi-exclamation-triangle text-white text-2xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">确认删除</h3>
-                            <p class="text-xs text-gray-500 mt-0.5">此操作不可恢复</p>
+                            <h3 class="text-xl font-bold text-gray-900">确认删除</h3>
+                            <p class="text-sm text-gray-500 mt-0.5">此操作不可恢复</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- 内容区 -->
-                <div class="px-4 pb-4">
-                    <div class="flex items-center gap-2.5 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                            <i class="bi bi-server text-white text-sm"></i>
+                <div class="px-5 pb-5">
+                    <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
+                        <div class="w-11 h-11 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                            <i class="bi bi-server text-white text-base"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="font-medium text-sm text-gray-900 truncate">{{ configToDelete?.config?.name }}</p>
-                            <p class="text-xs text-gray-500 mt-0.5 truncate">{{ configToDelete?.config?.endpoint }}</p>
+                            <p class="font-medium text-base text-gray-900 truncate">{{ configToDelete?.config?.name }}</p>
+                            <p class="text-sm text-gray-500 mt-0.5 truncate">{{ configToDelete?.config?.endpoint }}</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- 底部操作栏 -->
-                <div class="flex items-center justify-end gap-2.5 p-4 border-t border-gray-100 bg-gray-50">
+                <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
                     <button @click="showDeleteDialog = false"
-                            class="px-4 py-2 text-sm text-gray-700 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-200">
+                            class="px-5 py-2.5 text-base text-gray-700 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-200">
                         取消
                     </button>
                     <button @click="confirmDelete"
-                            class="px-5 py-2 text-sm bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-500/20 flex items-center gap-1.5 font-medium">
-                        <i class="bi bi-trash text-xs"></i>
+                            class="px-6 py-2.5 text-base bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 font-medium">
+                        <i class="bi bi-trash text-sm"></i>
                         <span>确认删除</span>
                     </button>
                 </div>
